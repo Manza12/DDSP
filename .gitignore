@@ -1,9 +1,8 @@
 # Gon's ignore
 /TensoringAudio.py
 /TryCharge.py
-/Try.py
+/Raw
 /Audios
-/.idea
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
