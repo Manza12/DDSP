@@ -1,8 +1,8 @@
 import torch
 from DataLoader import raw_2_tensor
 
-print(torch.cuda.is_available())
+print("CUDA available :", torch.cuda.is_available())
 
-raw_2_tensor("example.csv")
+print(raw_2_tensor("example.csv"))
 
 

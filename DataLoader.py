@@ -60,6 +60,9 @@ def raw_2_tensor(file_name):
 
             if PRINT_LEVEL == "INFO" or PRINT_LEVEL == "DEBUG":
                 print("Données chargées.")
+
+            return time_freq_tensor, time_loudness_tensor
+
     except UnboundLocalError:
         print("The file", file_name, "is not a .csv")
     except FileNotFoundError:
