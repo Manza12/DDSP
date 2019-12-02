@@ -1,101 +1,77 @@
-import numpy as np
 import torch
-
 import os
 import csv
 
 from scipy.io.wavfile import read
-import librosa as li
+from torch.utils.data import Dataset as ParentDataset
 
-from Parameters import AUDIO_PATH, RAW_PATH, RAW_DATA_FRECUENCY
+import librosa as li
+import numpy as np
+import pandas as pd
+
+from Parameters import AUDIO_PATH, RAW_PATH, RAW_DATA_FRECUENCY, SAMPLES_PER_FILE
 
 # Possible modes : DEBUG, INFO, RUN
 PRINT_LEVEL = "INFO"
 
 
-def charge_data():
-    if PRINT_LEVEL == "INFO" or PRINT_LEVEL == "DEBUG":
-        print("Charging audio ...")
+class Dataset(ParentDataset):
+    """ F0 and Loudness dataset."""
 
-    audio_tensors = list()
-    for file in os.listdir(AUDIO_PATH):
-        audio_tensors.append(audio_2_loudness_tensor(file))
+    def __init__(self):
+        self.audio_files = os.listdir(AUDIO_PATH)
+        self.raw_files = os.listdir(RAW_PATH)
 
-    if PRINT_LEVEL == "INFO" or PRINT_LEVEL == "DEBUG":
-        print("Audio charged.")
+    def __len__(self):
+        len_audio = len(self.audio_files)
+        len_raw = len(self.raw_files)
 
-    if PRINT_LEVEL == "INFO" or PRINT_LEVEL == "DEBUG":
-        print("Charging raw ...")
+        if len_audio == len_raw:
+            return len_audio * SAMPLES_PER_FILE
+        else:
+            raise Exception("Length of data set does not fit.")
 
-    raw_tensors = list()
-    for file in os.listdir(RAW_PATH):
-        raw_tensors.append(raw_2_tensor(file))
+    def __getitem__(self, idx):
+        file_idx = int(idx / 30)
+        fragment_idx = idx % 30
 
-    if PRINT_LEVEL == "INFO" or PRINT_LEVEL == "DEBUG":
-        print("Raw charged.")
+        raw_file = self.raw_files[file_idx]
+        frecuency_full = raw_2_tensor(raw_file)
+        frecuency = frecuency_full[int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
+                                   int((fragment_idx+1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
 
-    return audio_tensors, raw_tensors
+        audio_file = self.audio_files[file_idx]
+        loudness_full = audio_2_loudness_tensor(audio_file)
+        loudness = loudness_full[0, int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
+                                   int((fragment_idx + 1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
+
+        sample = {'frecuency': frecuency, 'loudness': loudness}
+
+        return sample
 
 
 def raw_2_tensor(file_name):
-    if file_name[-4:-3] == ".":
-        if file_name[-4:] == ".csv":
-            file_path = os.path.join(RAW_PATH, file_name)
-        else:
-            print("This file is not a .csv")
-    else:
-        file_path = os.path.join(RAW_PATH, file_name + ".csv")
+    file_path = os.path.join(RAW_PATH, file_name)
+    raw_data = pd.read_csv(file_path, header=0)
+    raw_array = raw_data.to_numpy()
+    frecuency_data = raw_array[:-1, 1]
+    frecuency_tensor = torch.from_numpy(frecuency_data)
 
-    if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-        print("Charging", file_name, "...")
-
-    try:
-        full_data = list()
-        with open(file_path) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            line_count = 0
-            for row in csv_reader:
-                if line_count == 0:
-                    if PRINT_LEVEL == "DEBUG":
-                        print("Tags :", row)
-                        print("Data dimensions :", len(row))
-
-                    line_count += 1
-                else:
-                    data = np.array(row).astype(np.float)
-                    full_data.append(data)
-
-            if PRINT_LEVEL == "DEBUG":
-                print("Parsing to tensors ...")
-
-            full_data_numpy = np.array(full_data)
-            shape = np.shape(full_data_numpy)
-
-            time_freq_data = full_data_numpy[np.ix_(np.arange(shape[0] - 1), [0, 1])]
-            time_confidence_data = full_data_numpy[np.ix_(np.arange(shape[0] - 1), [0, 2])]
-
-            time_freq_tensor = torch.from_numpy(time_freq_data)
-            time_confidence_tensor = torch.from_numpy(time_confidence_data)
-
-            if PRINT_LEVEL == "DEBUG":
-                print("Time-Frecuency tensor : ")
-                print(time_freq_tensor)
-
-                print("Time-Confidence tensor : ")
-                print(time_confidence_tensor)
-
-            if PRINT_LEVEL == "DEBUG":
-                print(file_name, "charged.")
-
-            return time_freq_tensor  # time_confidence_tensor
-
-    except UnboundLocalError:
-        print("The file", file_name, "is not a .csv")
-    except FileNotFoundError:
-        print("There is no file", file_name, "in /Raw folder.")
+    return frecuency_tensor
 
 
 def audio_2_loudness_tensor(file_name):
+    file_path = os.path.join(AUDIO_PATH, file_name)
+    [fs, data] = read(file_path)
+    data = data.astype(np.float)
+    frame_length = int(fs / RAW_DATA_FRECUENCY)
+    loudness_array = li.feature.rms(data, hop_length=frame_length, frame_length=frame_length)
+    loudness_tensor = torch.from_numpy(loudness_array)
+
+    return loudness_tensor
+
+
+def audio_2_loudness_tensor_old(file_name):
     if file_name[-4:-3] == ".":
         if file_name[-4:] == ".wav":
             file_path = os.path.join(AUDIO_PATH, file_name)
@@ -120,12 +96,13 @@ def audio_2_loudness_tensor(file_name):
 
         time_loudness_data = np.stack([time, loudness], axis=0)
 
+        loudness_tensor = torch.from_numpy(loudness)
         time_loudness_tensor = torch.from_numpy(time_loudness_data)
 
         if PRINT_LEVEL == "DEBUG":
             print("Audio charged.")
 
-        return time_loudness_tensor
+        return loudness_tensor  # time_loudness_tensor
 
     except UnboundLocalError:
         print("The file", file_name, "is not a .wav")

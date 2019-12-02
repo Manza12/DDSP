@@ -1,25 +1,16 @@
-from DataLoader import raw_2_tensor, audio_2_loudness_tensor, charge_data
+from torch.utils.data import DataLoader
+from DataLoader import Dataset
 
+dataset = Dataset()
 
-#### Pour vérifier que les données se chargent ####
-[audio_tensors, raw_tensors] = charge_data()
+samples_list = list()
 
-#### Pour vérifier si CUDA marche ####
-# print("CUDA available :", torch.cuda.is_available())
+length_dataset = len(dataset)
+for i in range(length_dataset):
+    print("Charging sample ", i+1, "/",length_dataset, "...")
+    sample = dataset[i]
+    samples_list.append(sample)
 
-#### PARTIE MATPLOTIB ####
+print("Samples charged.")
 
-# import matplotlib.pyplot as plt
-#
-# time_loudness_tensor = audio_2_loudness_tensor("sample_0.wav")
-# time_frecuency_tensor = raw_2_tensor("sample_0.f0.csv")
-#
-# time_loudness_array = time_loudness_tensor.numpy()
-# time_frecuency_array = time_frecuency_tensor.numpy()
-#
-# time = time_loudness_array[0, :]
-# loudness = time_loudness_array[1, :]
-# frecuency = time_frecuency_array[:, 1]
-#
-# plt.plot(time, frecuency)
-# plt.show()
+data_load = DataLoader(dataset, batch_size=16, shuffle=True)
