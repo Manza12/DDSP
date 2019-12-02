@@ -1,6 +1,5 @@
 import torch
 import os
-import csv
 
 from scipy.io.wavfile import read
 from torch.utils.data import Dataset as ParentDataset
@@ -69,42 +68,3 @@ def audio_2_loudness_tensor(file_name):
     loudness_tensor = torch.from_numpy(loudness_array)
 
     return loudness_tensor
-
-
-def audio_2_loudness_tensor_old(file_name):
-    if file_name[-4:-3] == ".":
-        if file_name[-4:] == ".wav":
-            file_path = os.path.join(AUDIO_PATH, file_name)
-        else:
-            print("This file is not a .wav")
-    else:
-        file_path = os.path.join(AUDIO_PATH, file_name + ".csv")
-
-    if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-        print("Charging ", file_name, "...")
-
-    try:
-        [fs, data] = read(file_path)
-        data = data.astype(np.float)
-
-        nb_samples = len(data)
-        frame_length = int(fs / RAW_DATA_FRECUENCY)
-        nb_frames = int(nb_samples / frame_length)
-
-        time = np.multiply(np.arange(nb_frames), 1 / RAW_DATA_FRECUENCY)
-        loudness = li.feature.rms(data, hop_length=frame_length, frame_length=frame_length)[0, 0:nb_frames]
-
-        time_loudness_data = np.stack([time, loudness], axis=0)
-
-        loudness_tensor = torch.from_numpy(loudness)
-        time_loudness_tensor = torch.from_numpy(time_loudness_data)
-
-        if PRINT_LEVEL == "DEBUG":
-            print("Audio charged.")
-
-        return loudness_tensor  # time_loudness_tensor
-
-    except UnboundLocalError:
-        print("The file", file_name, "is not a .wav")
-    except FileNotFoundError:
-        print("There is no file", file_name, "in /Raw folder.")
