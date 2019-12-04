@@ -38,11 +38,13 @@ class Dataset(ParentDataset):
         frecuency_full = raw_2_tensor(raw_file)
         frecuency = frecuency_full[int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
                                    int((fragment_idx+1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
+        frecuency = frecuency.reshape((frecuency.shape[0], 1))
 
         audio_file = self.audio_files[file_idx]
         loudness_full = audio_2_loudness_tensor(audio_file)
         loudness = loudness_full[0, int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
                                    int((fragment_idx + 1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
+        loudness = loudness.reshape((loudness.shape[0], 1))
 
         sample = {'frecuency': frecuency, 'loudness': loudness}
 
