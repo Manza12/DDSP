@@ -30,7 +30,7 @@ class DDSPNet(nn.Module):
         self.loudness_layer_norm_3 = nn.LayerNorm(LINEAR_OUT_DIM)
 
         """ Concatenated part """
-        self.gru = nn.GRU(2*LINEAR_OUT_DIM, HIDDEN_DIM)
+        self.gru = nn.GRU(2*LINEAR_OUT_DIM, HIDDEN_DIM, batch_first=True)
 
         self.linear_1 = nn.Linear(HIDDEN_DIM, HIDDEN_DIM)
         self.linear_2 = nn.Linear(HIDDEN_DIM, HIDDEN_DIM)

@@ -2,6 +2,7 @@ import torch
 
 from NetGon import DDSPNet
 from DataLoader import Dataset
+from Synthese import synthese_harmonique
 from torch.utils.data import DataLoader
 
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -12,8 +13,11 @@ dataset = Dataset()
 data_loader = DataLoader(dataset, batch_size=6, shuffle=True)
 
 for i, data in enumerate(data_loader, 0):
-    # get the inputs; data is a list of [inputs, labels]
+    print(i + 1)
 
     outputs = net(data)
+    f0 = data["frecuency"]
 
-    print(i+1)
+    son = synthese_harmonique(outputs, f0)
+
+    # stft_1 = torch.stft(son)
