@@ -8,7 +8,7 @@ import librosa as li
 import numpy as np
 import pandas as pd
 
-from Parameters import AUDIO_PATH, RAW_PATH, RAW_DATA_FRECUENCY, SAMPLES_PER_FILE
+from Parameters import AUDIO_PATH, RAW_PATH, RAW_DATA_FRECUENCY, SAMPLES_PER_FILE, AUDIO_SAMPLING_RATE, STFT_SIZE
 
 # Possible modes : DEBUG, INFO, RUN
 PRINT_LEVEL = "INFO"
@@ -41,12 +41,19 @@ class Dataset(ParentDataset):
         frecuency = frecuency.reshape((frecuency.shape[0], 1))
 
         audio_file = self.audio_files[file_idx]
-        loudness_full = audio_2_loudness_tensor(audio_file)
+
+        [loudness_full, data_full] = audio_2_loudness_tensor(audio_file)
         loudness = loudness_full[0, int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
                                    int((fragment_idx + 1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
+        data = data_full[int(fragment_idx * 60 * AUDIO_SAMPLING_RATE / SAMPLES_PER_FILE):
+                                   int((fragment_idx + 1) * 60 * AUDIO_SAMPLING_RATE / SAMPLES_PER_FILE)]
+
         loudness = loudness.reshape((loudness.shape[0], 1))
 
-        sample = {'frecuency': frecuency, 'loudness': loudness}
+        stft = torch.stft(torch.from_numpy(data), STFT_SIZE, window=torch.hann_window(STFT_SIZE), onesided=True)
+        squared_module = stft[:, :, 0] ** 2 + stft[:, :, 1] ** 2
+
+        sample = {'frecuency': frecuency, 'loudness': loudness, 'stft' : squared_module}
 
         return sample
 
@@ -69,4 +76,4 @@ def audio_2_loudness_tensor(file_name):
     loudness_array = li.feature.rms(data, hop_length=frame_length, frame_length=frame_length)
     loudness_tensor = torch.from_numpy(loudness_array)
 
-    return loudness_tensor
+    return loudness_tensor, data

@@ -3,8 +3,19 @@
 import os
 
 ## FOLDER PARAMETERS ##
-AUDIO_PATH = os.path.join("Audio")
-RAW_PATH = os.path.join("Raw")
+TEST = False
+if TEST:
+    AUDIO_PATH = os.path.join("AudioTest")
+    RAW_PATH = os.path.join("RawTest")
+else:
+    AUDIO_PATH = os.path.join("Audio")
+    RAW_PATH = os.path.join("Raw")
+
+
+## MODELS ##
+PATH_SAVED_MODELS = os.path.join("Models")
+MODEL_NAME = "Third_model"
+PATH_TO_MODEL = os.path.join(PATH_SAVED_MODELS, MODEL_NAME + ".pth")
 
 
 ## DATA PARAMETERS ##
