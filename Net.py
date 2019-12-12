@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import LINEAR_OUT_DIM, OUTPUT_DIM, HIDDEN_DIM, USE_SIGMOID, SIGMOID_EXP
+from Parameters import LINEAR_OUT_DIM, OUTPUT_DIM, HIDDEN_DIM, USE_SIGMOID, SIGMOID_EXP, GPU_ON, CUDA_ON, DEVICE
 
 
 class MLP(nn.Module):

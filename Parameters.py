@@ -1,6 +1,7 @@
 #### PARAMETERS FILE ####
 
 import os
+import torch
 
 ## FOLDER PARAMETERS ##
 TEST = False
@@ -20,6 +21,9 @@ PATH_TO_MODEL = os.path.join(PATH_SAVED_MODELS, MODEL_NAME + ".pth")
 
 ## TRAIN PARAMETERS ##
 NUMBER_EPOCHS = 1
+GPU_ON = True
+CUDA_ON = torch.cuda.is_available()
+DEVICE = torch.device("cuda:0" if CUDA_ON and GPU_ON else "cpu")
 
 
 ## DATA PARAMETERS ##
