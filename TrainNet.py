@@ -1,4 +1,5 @@
 import torch
+import time
 
 from NetGon import DDSPNet
 from DataLoader import Dataset
@@ -23,21 +24,43 @@ for epoch in range(NUMBER_EPOCHS):
         print("Data", i + 1)
 
         fragment, waveform = data
-
         optimizer.zero_grad()
 
+        # Time #
+        time_pre_net = time.time()
+        ########
+
         y = net(fragment)
+
+        # Time #
+        time_post_net = time.time()
+        print("Time through net", time_post_net - time_pre_net)
+        ########
 
         f0s = fragment["f0"][:, :, 0]
         a0s = y[:, :, 0]
         aa = y[:, :, 1:]
 
+        # Time #
+        time_pre_synth = time.time()
+        ########
+
         sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE)
+
+        # Time #
+        time_post_synth = time.time()
+        print("Time to synthetize", time_post_synth - time_pre_synth)
+        ########
 
         stft = torch.stft(sons, STFT_SIZE, window=torch.hann_window(STFT_SIZE), onesided=True)
         squared_module = stft[:, :, :, 0] ** 2 + stft[:, :, :, 1] ** 2
         stft_original = torch.stft(waveform[:, 0:sons.shape[1]], STFT_SIZE, window=torch.hann_window(STFT_SIZE), onesided=True)
         squared_module_original = stft_original[:,:,:,0]**2 + stft_original[:,:,:,0]**2
+
+        # Time #
+        time_post_stft = time.time()
+        print("Time to perform stft", time_post_stft - time_post_synth)
+        ########
 
         loss = loss_function(squared_module, squared_module_original)
 
@@ -45,19 +68,9 @@ for epoch in range(NUMBER_EPOCHS):
 
         loss.backward()
 
-        # for k in range(y.shape[0]):
-        #     outputs_sample = y[k,:,:]
-        #     f0_sample = f0[k,:,:]
-        #     son = synthetize() synthese(outputs_sample, f0_sample)
-        #     son_tensor = torch.tensor(son)
-        #     stft = torch.stft(son_tensor, STFT_SIZE, window=torch.hann_window(STFT_SIZE), onesided=True)
-        #     squared_module = stft[:,:,0]**2 + stft[:,:,1]**2
-        #
-        #     # squared_module.requires_grad_(True)
-        #     print(squared_module.grad_fn)
-        #
-        #     loss += loss_function(squared_module, squared_module_original[k,:,:])
-
-
+        # Time #
+        time_end = time.time()
+        print("Time to backpropagate", time_end - time_post_stft)
+        ########
 
 torch.save(net, PATH_TO_MODEL)
