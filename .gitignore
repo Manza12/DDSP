@@ -2,8 +2,13 @@
 /TensoringAudio.py
 /TryCharge.py
 /Try.py
+/TryNet.py
+/TrySynth.py
 /.idea
 /Audio
+/AudioTest
+/RawTest
+/Old
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
