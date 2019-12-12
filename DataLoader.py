@@ -8,7 +8,7 @@ import librosa as li
 import numpy as np
 import pandas as pd
 
-from Parameters import AUDIO_PATH, RAW_PATH, RAW_DATA_FRECUENCY, SAMPLES_PER_FILE, AUDIO_SAMPLING_RATE, STFT_SIZE
+from Parameters import AUDIO_PATH, RAW_PATH, FRAME_SAMPLE_RATE, FRAGMENTS_PER_FILE, AUDIO_SAMPLE_RATE, STFT_SIZE
 
 # Possible modes : DEBUG, INFO, RUN
 PRINT_LEVEL = "INFO"
@@ -26,7 +26,7 @@ class Dataset(ParentDataset):
         len_raw = len(self.raw_files)
 
         if len_audio == len_raw:
-            return len_audio * SAMPLES_PER_FILE
+            return len_audio * FRAGMENTS_PER_FILE
         else:
             raise Exception("Length of data set does not fit.")
 
@@ -34,31 +34,28 @@ class Dataset(ParentDataset):
         file_idx = int(idx / 30)
         fragment_idx = idx % 30
 
-        raw_file = self.raw_files[file_idx]
-        frecuency_full = raw_2_tensor(raw_file)
-        frecuency = frecuency_full[int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
-                                   int((fragment_idx+1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
-        frecuency = frecuency.reshape((frecuency.shape[0], 1))
+        f0_file_name = self.raw_files[file_idx]
+        f0_full = f0_2_tensor(f0_file_name)
+        f0 = f0_full[int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
+                                   int((fragment_idx+1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
+        f0 = f0.reshape((f0.shape[0], 1))
 
-        audio_file = self.audio_files[file_idx]
+        audio_file_name = self.audio_files[file_idx]
 
-        [loudness_full, data_full] = audio_2_loudness_tensor(audio_file)
-        loudness = loudness_full[0, int(fragment_idx * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE):
-                                   int((fragment_idx + 1) * 60 * RAW_DATA_FRECUENCY / SAMPLES_PER_FILE)]
-        data = data_full[int(fragment_idx * 60 * AUDIO_SAMPLING_RATE / SAMPLES_PER_FILE):
-                                   int((fragment_idx + 1) * 60 * AUDIO_SAMPLING_RATE / SAMPLES_PER_FILE)]
+        [lo_full, waveform_full] = audio_2_loudness_tensor(audio_file_name)
+        lo = lo_full[0, int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
+                                   int((fragment_idx + 1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
+        waveform = waveform_full[int(fragment_idx * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE):
+                                   int((fragment_idx + 1) * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
 
-        loudness = loudness.reshape((loudness.shape[0], 1))
+        lo = lo.reshape((lo.shape[0], 1))
 
-        stft = torch.stft(torch.from_numpy(data), STFT_SIZE, window=torch.hann_window(STFT_SIZE), onesided=True)
-        squared_module = stft[:, :, 0] ** 2 + stft[:, :, 1] ** 2
+        fragment = {'f0': f0, 'lo': lo}
 
-        sample = {'frecuency': frecuency, 'loudness': loudness, 'stft' : squared_module}
-
-        return sample
+        return fragment, waveform
 
 
-def raw_2_tensor(file_name):
+def f0_2_tensor(file_name):
     file_path = os.path.join(RAW_PATH, file_name)
     raw_data = pd.read_csv(file_path, header=0)
     raw_array = raw_data.to_numpy()
@@ -72,7 +69,7 @@ def audio_2_loudness_tensor(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
     [fs, data] = read(file_path)
     data = data.astype(np.float)
-    frame_length = int(fs / RAW_DATA_FRECUENCY)
+    frame_length = int(fs / FRAME_SAMPLE_RATE)
     loudness_array = li.feature.rms(data, hop_length=frame_length, frame_length=frame_length)
     loudness_tensor = torch.from_numpy(loudness_array)
 
