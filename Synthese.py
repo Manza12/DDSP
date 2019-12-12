@@ -1,72 +1,52 @@
+import torch
+import torch.nn.functional as func
+
 import numpy as np
-import scipy.io.wavfile as wav
-
-from Parameters import AUDIO_SAMPLING_RATE, SAMPLE_DURATION, OUTPUT_DIM
-from tqdm import tqdm
 
 
-def synthese_torch(outputs, f0):
-    num_harmonics = OUTPUT_DIM - 1
-    n_sample = AUDIO_SAMPLING_RATE * SAMPLE_DURATION
-    lo = outputs[:, 0]
-    alpha = outputs
-    oldx = np.linspace(0, 1, f0.shape[0])
-    newx = np.linspace(0, 1, n_sample)
-    f0 = np.interp(newx, oldx, f0[:,0]) / AUDIO_SAMPLING_RATE
-    lo = np.interp(newx, oldx, lo.numpy())
-    alpha = np.stack([np.interp(newx, oldx, alpha[:, i]) for i in range(1, num_harmonics+1)])
-    phi = np.zeros(f0.shape)
-    aa = np.zeros((num_harmonics, f0.shape[-1]))
-    k = np.arange(1, num_harmonics + 1).reshape(1, -1)
-    for i in tqdm(np.arange(1, phi.shape[-1])):
-        phi[i] = 2 * np.pi * f0[i] + phi[i - 1]
-        aa[:, i] = (f0[i] * k) < .5
-    y = lo * np.sum(aa * alpha * np.sin(k.reshape(-1, 1) * phi.reshape(1, -1)), 0)
-    wav.write("Test_antoine.wav", AUDIO_SAMPLING_RATE, y)
-    return y
+def synthetize(a0s, f0s, aa, frame_length, sample_rate):
+    assert a0s.size() == f0s.size()
+    assert a0s.size()[1] == aa.size()[1]
+
+    nb_bounds = f0s.size()[1]
+    signal_length = (nb_bounds - 1) * frame_length
+    # interpol_factor = signal_length / nb_bounds
+
+    # interpolate f0 over time
+    # TODO paper mentions bilinear interpolation ?
+    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
+    f0s = f0s.squeeze(1)
 
 
-def synthese(outputs, f0):
-    num_harmonics = OUTPUT_DIM - 1
-    n_sample = AUDIO_SAMPLING_RATE * SAMPLE_DURATION
-    lo = outputs[:, 0]
-    alpha = outputs
-    oldx = np.linspace(0, 1, f0.shape[0])
-    newx = np.linspace(0, 1, n_sample)
-    f0 = np.interp(newx, oldx, f0[:,0]) / AUDIO_SAMPLING_RATE
-    lo = np.interp(newx, oldx, lo.detach().numpy())
-    alpha = np.stack([np.interp(newx, oldx, alpha[:, i].detach().numpy()) for i in range(1, num_harmonics+1)])
-    phi = np.zeros(f0.shape)
-    aa = np.zeros((num_harmonics, f0.shape[-1]))
-    k = np.arange(1, num_harmonics + 1).reshape(1, -1)
-    for i in tqdm(np.arange(1, phi.shape[-1])):
-        phi[i] = 2 * np.pi * f0[i] + phi[i - 1]
-        aa[:, i] = (f0[i] * k) < .5
-    y = lo * np.sum(aa * alpha * np.sin(k.reshape(-1, 1) * phi.reshape(1, -1)), 0)
+    # # interpolate a0 over time
+    # # TODO paper mentions using Hamming window
+    # a0s = func.interpolate(a0s.unsqueeze(1), scale_factor=signal_length / nb_bounds, mode='linear', align_corners=True)
+    # a0s = a0s.squeeze(1)
 
-    return y
+    # multiply interpolated f0s by harmonic ranks to get all freqs
+    nb_harms = aa.size()[-1]
+    harm_ranks = torch.arange(nb_harms) + 1
+    ff = f0s.unsqueeze(2) * harm_ranks
 
+    # phase accumulation over time for each freq
+    phases = 2 * np.pi * ff / sample_rate
+    phases_acc = torch.cumsum(phases, dim=1)
 
-def synthese_write(outputs, f0):
-    num_harmonics = OUTPUT_DIM - 1
-    n_sample = AUDIO_SAMPLING_RATE * SAMPLE_DURATION
-    stride = AUDIO_SAMPLING_RATE // 100
-    x = np.linspace(0, SAMPLE_DURATION, n_sample // stride)
-    xp = np.linspace(0, SAMPLE_DURATION, n_sample // stride)
-    fp = f0
-    f0 = np.interp(x, xp, fp)
-    lo = np.ones(n_sample//stride)
-    alpha = outputs
-    oldx = np.linspace(0, 1, len(f0))
-    newx = np.linspace(0, 1, n_sample)
-    f0 = np.interp(newx, oldx, f0) / AUDIO_SAMPLING_RATE
-    lo = np.interp(newx, oldx, lo)
-    alpha = np.stack([np.interp(newx, oldx, alpha[:, i]) for i in range(1, num_harmonics+1)])
-    phi = np.zeros(f0.shape)
-    aa = np.zeros((num_harmonics, f0.shape[-1]))
-    k = np.arange(1, num_harmonics + 1).reshape(1, -1)
-    for i in tqdm(np.arange(1, phi.shape[-1])):
-        phi[i] = 2 * np.pi * f0[i] + phi[i - 1]
-        aa[:, i] = (f0[i] * k) < .5
-    y = lo * np.sum(aa * alpha * np.sin(k.reshape(-1, 1) * phi.reshape(1, -1)), 0)
-    wav.write("Test_antoine.wav", AUDIO_SAMPLING_RATE, y)
+    # denormalize amplitudes with a0
+    aa_sum = torch.sum(aa, dim=2)
+    # avoid 0-div when all amplitudes are 0
+    aa_sum[aa_sum == 0.] = 1.
+    aa_norm = aa / aa_sum.unsqueeze(-1)
+    aa = aa_norm * a0s.unsqueeze(-1)
+
+    # interpolate amplitudes over time
+    # TODO use Hamming window instead? (cf ddsp paper)
+    aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
+                          align_corners=True)
+    aa = aa.squeeze(1)
+
+    signals = aa * torch.cos(phases_acc)
+    # sum over harmonics
+    signal = torch.sum(signals, dim=2)
+
+    return signal
