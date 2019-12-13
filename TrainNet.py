@@ -120,7 +120,7 @@ for epoch in range(NUMBER_EPOCHS):
         stfts = torch.stft(sons, STFT_SIZE, window=window, onesided=True)
         squared_modules = stfts[:, :, :, 0] ** 2 + stfts[:, :, :, 1] ** 2
         stft_originals = torch.stft(waveforms[:, 0:sons.shape[1]], STFT_SIZE, window=window, onesided=True)
-        squared_module_originals = stft_originals[:, :, :, 0] ** 2 + stft_originals[:, :, :, 0] ** 2
+        squared_module_originals = stft_originals[:, :, :, 0] ** 2 + stft_originals[:, :, :, 1] ** 2
 
         # Time #
         if PRINT_LEVEL == "DEBUG":
@@ -132,6 +132,7 @@ for epoch in range(NUMBER_EPOCHS):
 
         loss = loss_function(squared_modules, squared_module_originals)
         loss.backward()
+        optimizer.step()
 
         # Time #
         if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":

@@ -54,6 +54,6 @@ class DDSPNet(nn.Module):
         y = self.dense(y)
 
         if USE_SIGMOID:
-            y = 2 * torch.sigmoid(y) ** SIGMOID_EXP + 1e-7
+            y = torch.sigmoid(y) ** SIGMOID_EXP + 1e-20
 
         return y

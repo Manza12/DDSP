@@ -85,6 +85,6 @@ def audio_2_loudness_tensor(file_name):
 
     frame_length = int(fs / FRAME_SAMPLE_RATE)
     loudness_array = li.feature.rms(waveform, hop_length=frame_length, frame_length=frame_length)
-    loudness_tensor = torch.from_numpy(loudness_array)
+    loudness_tensor = torch.from_numpy(np.log(loudness_array + 1e-10))
 
     return loudness_tensor, waveform
