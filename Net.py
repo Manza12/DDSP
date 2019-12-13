@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import LINEAR_OUT_DIM, OUTPUT_DIM, HIDDEN_DIM, USE_SIGMOID, SIGMOID_EXP, GPU_ON, CUDA_ON, DEVICE
+from Parameters import LINEAR_OUT_DIM, OUTPUT_DIM, HIDDEN_DIM, USE_SIGMOID, SIGMOID_EXP
 
 
 class MLP(nn.Module):
@@ -54,6 +54,6 @@ class DDSPNet(nn.Module):
         y = self.dense(y)
 
         if USE_SIGMOID:
-            y = 2 * func.sigmoid(y) ** SIGMOID_EXP + 1e-7
+            y = 2 * torch.sigmoid(y) ** SIGMOID_EXP + 1e-7
 
         return y

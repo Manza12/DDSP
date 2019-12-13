@@ -75,10 +75,16 @@ def f0_2_tensor(file_name):
 
 def audio_2_loudness_tensor(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
-    [fs, data] = read(file_path)
-    data = data.astype(np.float)
+    [fs, waveform] = read(file_path)
+
+    assert fs == AUDIO_SAMPLE_RATE
+
+    dtype = waveform.dtype
+    if np.issubdtype(dtype, np.integer):
+        waveform = waveform.astype(np.float64) / np.iinfo(dtype).max
+
     frame_length = int(fs / FRAME_SAMPLE_RATE)
-    loudness_array = li.feature.rms(data, hop_length=frame_length, frame_length=frame_length)
+    loudness_array = li.feature.rms(waveform, hop_length=frame_length, frame_length=frame_length)
     loudness_tensor = torch.from_numpy(loudness_array)
 
-    return loudness_tensor, data
+    return loudness_tensor, waveform
