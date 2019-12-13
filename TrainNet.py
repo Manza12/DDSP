@@ -11,17 +11,17 @@ from Synthese import synthetize
 from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import STFT_SIZE, PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
-    DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE
+    DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT
 
 
 #### Debug settings ####
 PRINT_LEVEL = "RUN"  # Possible modes : DEBUG, INFO, RUN, TRAIN
 
 #### Pytorch settings ####
-torch.set_default_tensor_type(torch.DoubleTensor)
+torch.set_default_tensor_type(torch.FloatTensor)
 
 #### Net ####
-net = DDSPNet()
+net = DDSPNet().float()
 net = net.to(DEVICE)
 optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
 loss_function = torch.nn.MSELoss()
@@ -62,12 +62,22 @@ for epoch in range(NUMBER_EPOCHS):
             time_data_start = time.time()
         else:
             time_data_start = None
-            ########
+        ########
 
         fragments, waveforms = data
 
+        # Time #
+        if PRINT_LEVEL == "DEBUG":
+            time_device_start = time.time()
+
         fragments["f0"] = fragments["f0"].to(DEVICE)
         fragments["lo"] = fragments["lo"].to(DEVICE)
+
+        # Time #
+        if PRINT_LEVEL == "DEBUG":
+            time_device_end = time.time()
+            print("Time to device :", round(time_device_end - time_device_start, 5), "s")
+        ########
 
         optimizer.zero_grad()
 
@@ -117,6 +127,7 @@ for epoch in range(NUMBER_EPOCHS):
         """ STFT's """
         waveforms = waveforms.to(DEVICE)
         window = torch.hann_window(STFT_SIZE, device=DEVICE)
+
         stfts = torch.stft(sons, STFT_SIZE, window=window, onesided=True)
         squared_modules = stfts[:, :, :, 0] ** 2 + stfts[:, :, :, 1] ** 2
         stft_originals = torch.stft(waveforms[:, 0:sons.shape[1]], STFT_SIZE, window=window, onesided=True)
@@ -130,7 +141,8 @@ for epoch in range(NUMBER_EPOCHS):
             time_post_stft = None
         ########
 
-        loss = loss_function(squared_modules, squared_module_originals)
+        loss = loss_function(squared_modules, squared_module_originals) \
+               + loss_function(torch.log(squared_modules + 1e-20), torch.log(squared_module_originals + 1e-20))
         loss.backward()
         optimizer.step()
 
@@ -155,11 +167,13 @@ for epoch in range(NUMBER_EPOCHS):
     # Time #
     if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
         time_epoch_end = time.time()
-        print("Time of the epoch :", round(time_epoch_end - time_epoch_start, 3), "s")
+        print("Time of the epoch :", round(time_epoch_end - time_epoch_start, 3), "s\n\n\n------------\n\n\n")
     ########
 
+    torch.save(net.state_dict(), PATH_TO_CHECKPOINT)
+
 #### Save ####
-torch.save(net, PATH_TO_MODEL)
+torch.save(net.state_dict(), PATH_TO_MODEL)
 
 # Time #
 if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN" or PRINT_LEVEL == "TRAIN":

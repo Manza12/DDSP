@@ -44,7 +44,7 @@ class Dataset(ParentDataset):
         f0_full = f0_2_tensor(f0_file_name)
         f0 = f0_full[int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
                                    int((fragment_idx+1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
-        f0 = f0.reshape((f0.shape[0], 1))
+        f0 = f0.reshape((f0.shape[0], 1)).float()
 
         audio_file_name = self.audio_files[file_idx]
         if PRINT_LEVEL == "DEBUG":
@@ -52,11 +52,11 @@ class Dataset(ParentDataset):
 
         [lo_full, waveform_full] = audio_2_loudness_tensor(audio_file_name)
         lo = lo_full[0, int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
-                                   int((fragment_idx + 1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
+                                   int((fragment_idx + 1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)].float()
         waveform = waveform_full[int(fragment_idx * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE):
                                    int((fragment_idx + 1) * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
 
-        lo = lo.reshape((lo.shape[0], 1))
+        lo = lo.reshape((lo.shape[0], 1)).float()
 
         fragment = {'f0': f0, 'lo': lo}
 
@@ -81,7 +81,7 @@ def audio_2_loudness_tensor(file_name):
 
     dtype = waveform.dtype
     if np.issubdtype(dtype, np.integer):
-        waveform = waveform.astype(np.float64) / np.iinfo(dtype).max
+        waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
 
     frame_length = int(fs / FRAME_SAMPLE_RATE)
     loudness_array = li.feature.rms(waveform, hop_length=frame_length, frame_length=frame_length)

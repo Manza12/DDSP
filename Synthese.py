@@ -48,6 +48,11 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate):
                           align_corners=True)
     aa = aa.squeeze(1)
 
+    # print(torch.cuda.memory_allocated(device=DEVICE))
+    # print(torch.cuda.memory_cached(device=DEVICE))
+
+    torch.cuda.empty_cache()
+
     signals = aa * torch.cos(phases_acc)
     # sum over harmonics
     signal = torch.sum(signals, dim=2)
