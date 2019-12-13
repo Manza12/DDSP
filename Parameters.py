@@ -15,12 +15,16 @@ else:
 
 ## MODELS ##
 PATH_SAVED_MODELS = os.path.join("Models")
-MODEL_NAME = "Third_model"
+MODEL_NAME = "GPU_model_3"
 PATH_TO_MODEL = os.path.join(PATH_SAVED_MODELS, MODEL_NAME + ".pth")
 
 
 ## TRAIN PARAMETERS ##
+SHUFFLE_DATALOADER = True
+BATCH_SIZE = 15
 NUMBER_EPOCHS = 1
+LEARNING_RATE = 0.001
+
 GPU_ON = True
 CUDA_ON = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if CUDA_ON and GPU_ON else "cpu")
