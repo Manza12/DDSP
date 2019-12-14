@@ -16,7 +16,7 @@ def debug_level_2_number(debug_level):
 
 def print_time(message, debug_level, debug_status, time_start, digits):
     time_stamp = time.time()
-    print_info(message + " " + string_time(round(time_stamp - time_start, digits)), debug_level, debug_status)
+    print_info(message + " " + string_time(time_stamp - time_start, digits), debug_level, debug_status)
     return time_stamp
 
 
@@ -25,8 +25,8 @@ def print_info(message, debug_level, debug_status):
         print(message)
 
 
-def string_time(time_spent):
-    seconds = time_spent % 60
+def string_time(time_spent, digits):
+    seconds = round(time_spent % 60, digits)
     minutes = round(time_spent // 60)
     hours = round(time_spent // 3600)
 
