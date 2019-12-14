@@ -19,7 +19,8 @@ MODEL_CHECKPOINT = "Model_with_Olivier_checkpoint"
 MODEL_NAME = "Model_with_Olivier"
 PATH_TO_CHECKPOINT = os.path.join(PATH_SAVED_MODELS, MODEL_CHECKPOINT + ".pth")
 PATH_TO_MODEL = os.path.join(PATH_SAVED_MODELS, MODEL_NAME + ".pth")
-
+FRAGMENT_CACHE_PATH = "Cache"
+FRAGMENT_CACHE_PATTERN = os.path.join(FRAGMENT_CACHE_PATH, "{:d}.pth")
 
 ## TRAIN PARAMETERS ##
 SHUFFLE_DATALOADER = True
