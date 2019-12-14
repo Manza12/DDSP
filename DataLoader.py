@@ -29,7 +29,7 @@ class Dataset(ParentDataset):
         if PRINT_LEVEL == "DEBUG":
             print("Getting item", idx)
 
-        frag_path = FRAGMENT_CACHE_PATTERN.format(idx)
+        frag_path = os.path.join(FRAGMENT_CACHE_PATH, FRAGMENT_CACHE_PATTERN.format(idx))
         frag = torch.load(frag_path)
         return frag
 
@@ -42,8 +42,8 @@ def compute_cache():
     item_i = 0
     for audio_filename, f0_filename in zip(audio_filenames, f0_filenames):
         if PRINT_LEVEL == "DEBUG":
-            print("F0 file name :", f0_file_name)
-            print("Audio file name :", audio_file_name)
+            print("F0 file name :", f0_filename)
+            print("Audio file name :", audio_filename)
 
         f0_full = read_f0(f0_filename)
         lo_full = read_lo(audio_filename)
@@ -52,7 +52,7 @@ def compute_cache():
 
         for frag_i in range(FRAGMENTS_PER_FILE):
             inputs, stfts = compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i)
-            frag_path = FRAGMENT_CACHE_PATTERN.format(item_i)
+            frag_path = os.path.join(FRAGMENT_CACHE_PATH, FRAGMENT_CACHE_PATTERN.format(item_i))
             torch.save((inputs, stfts), frag_path)
             item_i += 1
 
