@@ -3,8 +3,6 @@ import torch.nn.functional as func
 
 import numpy as np
 
-from Parameters import AUDIO_SAMPLE_RATE
-
 
 def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
     assert a0s.size() == f0s.size()
@@ -12,13 +10,11 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
 
     nb_bounds = f0s.size()[1]
     signal_length = (nb_bounds - 1) * frame_length
-    # interpol_factor = signal_length / nb_bounds
 
     # interpolate f0 over time
     # TODO paper mentions bilinear interpolation ?
     f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
     f0s = f0s.squeeze(1)
-
 
     # # interpolate a0 over time
     # # TODO paper mentions using Hamming window
@@ -29,7 +25,6 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
     nb_harms = aa.size()[-1]
     harm_ranks = torch.arange(nb_harms, device=device) + 1
     ff = f0s.unsqueeze(2) * harm_ranks
-    ff = torch.where(ff <= AUDIO_SAMPLE_RATE/2, ff, torch.zeros(ff.shape, device=device))
 
     # phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
@@ -48,13 +43,16 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
                           align_corners=True)
     aa = aa.squeeze(1)
 
+    # prevent aliasing
+    aa[ff >= sample_rate / 2.1] = 0.
+
     # print(torch.cuda.memory_allocated(device=DEVICE))
     # print(torch.cuda.memory_cached(device=DEVICE))
 
     torch.cuda.empty_cache()
 
-    signals = aa * torch.cos(phases_acc)
+    waveforms = aa * torch.cos(phases_acc)
     # sum over harmonics
-    signal = torch.sum(signals, dim=2)
+    waveforms = torch.sum(waveforms, dim=2)
 
-    return signal
+    return waveforms
