@@ -3,10 +3,10 @@ import torch.nn.functional as func
 
 import numpy as np
 
-from Parameters import DEVICE, AUDIO_SAMPLE_RATE
+from Parameters import AUDIO_SAMPLE_RATE
 
 
-def synthetize(a0s, f0s, aa, frame_length, sample_rate):
+def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
     assert a0s.size() == f0s.size()
     assert a0s.size()[1] == aa.size()[1]
 
@@ -27,9 +27,9 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate):
 
     # multiply interpolated f0s by harmonic ranks to get all freqs
     nb_harms = aa.size()[-1]
-    harm_ranks = torch.arange(nb_harms, device=DEVICE) + 1
+    harm_ranks = torch.arange(nb_harms, device=device) + 1
     ff = f0s.unsqueeze(2) * harm_ranks
-    ff = torch.where(ff <= AUDIO_SAMPLE_RATE/2, ff, torch.zeros(ff.shape, device=DEVICE))
+    ff = torch.where(ff <= AUDIO_SAMPLE_RATE/2, ff, torch.zeros(ff.shape, device=device))
 
     # phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate

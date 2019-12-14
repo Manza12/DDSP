@@ -15,7 +15,7 @@ from Parameters import STFT_SIZE, PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AU
 
 
 #### Debug settings ####
-PRINT_LEVEL = "RUN"  # Possible modes : DEBUG, INFO, RUN, TRAIN
+PRINT_LEVEL = "DEBUG"  # Possible modes : DEBUG, INFO, RUN, TRAIN
 
 #### Pytorch settings ####
 torch.set_default_tensor_type(torch.FloatTensor)
@@ -69,6 +69,9 @@ for epoch in range(NUMBER_EPOCHS):
         # Time #
         if PRINT_LEVEL == "DEBUG":
             time_device_start = time.time()
+        else:
+            time_device_start = None
+        ########
 
         fragments["f0"] = fragments["f0"].to(DEVICE)
         fragments["lo"] = fragments["lo"].to(DEVICE)
@@ -107,14 +110,7 @@ for epoch in range(NUMBER_EPOCHS):
             time_pre_synth = None
         ########
 
-        sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE)
-
-        # for k in range(sons.shape[0]):
-        #     son_synth = sons[k, :]
-        #     son_original = waveforms[k][0:son_synth.shape[0]]
-        #     wav.write(os.path.join("Outputs", str(i) + "_synth.wav"), AUDIO_SAMPLE_RATE, son_synth.detach().numpy().astype(np.float32))
-        #     wav.write(os.path.join("Outputs", str(i) + "_original.wav"), AUDIO_SAMPLE_RATE, son_original.detach().numpy())
-
+        sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
 
         # Time #
         if PRINT_LEVEL == "DEBUG":

@@ -8,7 +8,7 @@ import librosa as li
 import numpy as np
 import pandas as pd
 
-from Parameters import AUDIO_PATH, RAW_PATH, FRAME_SAMPLE_RATE, FRAGMENTS_PER_FILE, AUDIO_SAMPLE_RATE
+from Parameters import AUDIO_PATH, RAW_PATH, FRAME_SAMPLE_RATE, FRAGMENTS_PER_FILE, AUDIO_SAMPLE_RATE, FRAME_LENGTH
 
 #### Debug settings ####
 PRINT_LEVEL = "INFO"  # Possible modes : DEBUG, INFO, RUN
@@ -88,3 +88,52 @@ def audio_2_loudness_tensor(file_name):
     loudness_tensor = torch.from_numpy(np.log(loudness_array + 1e-10))
 
     return loudness_tensor, waveform
+
+
+#### Olivier's ####
+
+
+def read_f0(file_name):
+    file_path = os.path.join(RAW_PATH, file_name)
+    raw_data = pd.read_csv(file_path, header=0)
+    raw_array = raw_data.to_numpy()
+    f0 = raw_array[:-1, 1]
+    f0 = f0.astype(np.float32)
+
+    return f0
+
+
+import scipy
+import librosa as rosa
+
+def read_lo(file_name):
+    file_path = os.path.join(AUDIO_PATH, file_name)
+    [fs, waveform] = scipy.io.wavfile.read(file_path)
+
+    assert fs == AUDIO_SAMPLE_RATE
+
+    # int to float
+    dtype = waveform.dtype
+    if np.issubdtype(dtype, np.integer):
+        waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
+
+    lo = rosa.feature.rms(waveform, hop_length=FRAME_LENGTH, frame_length=FRAME_LENGTH)
+    lo = lo.flatten()
+    lo = lo.astype(np.float32)
+
+    lo = np.log(lo + np.finfo(np.float32).eps)
+
+    return lo
+
+def read_waveform(file_name):
+    file_path = os.path.join(AUDIO_PATH, file_name)
+    [fs, waveform] = scipy.io.wavfile.read(file_path)
+
+    assert fs == AUDIO_SAMPLE_RATE
+
+    # int to float
+    dtype = waveform.dtype
+    if np.issubdtype(dtype, np.integer):
+        waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
+
+    return waveform
