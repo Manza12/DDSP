@@ -147,7 +147,6 @@ for epoch in range(NUMBER_EPOCHS):
             time_data_end = None
         if PRINT_LEVEL == "DEBUG":
             print("Time to backpropagate :", round(time_data_end - time_post_stft, 3), "s")
-
         ########
 
         if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
