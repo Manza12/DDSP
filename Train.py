@@ -1,191 +1,114 @@
 import torch
 import time
 
-import scipy.io.wavfile as wav
-import os
-import numpy as np
-
 from Net import DDSPNet
 from DataLoader import Dataset
 from Synthese import synthetize
+from Time import print_time, print_info
 from Loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
-from Parameters import STFT_SIZE, PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
+from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES
 
 
-def train(net, dataloader, number_epochs):
+def train(net, dataloader, number_epochs, debug_level):
     optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.98)
-    nb_batchs = len(dataloader)
 
-    # Time #
-    if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN" or PRINT_LEVEL == "TRAIN":
-        time_start = time.time()
-    else:
-        time_start = None
-    ########
+    time_start = time.time()
 
     for epoch in range(number_epochs):
-        if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN" or PRINT_LEVEL == "TRAIN":
-            print("#### Epoch", epoch+1, "/", number_epochs, "####")
-
-        # Time #
-        if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
-            time_epoch_start = time.time()
-        else:
-            time_epoch_start = None
-        ########
+        print_info("#### Epoch " + str(epoch+1) + "/" + str(number_epochs) + " ####", debug_level, "TRAIN")
+        time_epoch_start = time.time()
+        nb_batchs = len(dataloader)
+        epoch_loss = 0
 
         for i, data in enumerate(dataloader, 0):
-            if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
-                print("## Data", i + 1, "##")
-
-            # Time #
-            if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-                time_data_start = time.time()
-            else:
-                time_data_start = None
-            ########
+            print_info("## Data " + str(i + 1) + "/" + str(nb_batchs) + " ##", debug_level, "RUN")
+            time_data_start = time.time()
+            optimizer.zero_grad()
 
             fragments, waveforms = data
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_device_start = time.time()
-            else:
-                time_device_start = None
-            ########
+            time_device_start = time.time()
 
             fragments["f0"] = fragments["f0"].to(DEVICE)
             fragments["lo"] = fragments["lo"].to(DEVICE)
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_device_end = time.time()
-                print("Time to device :", round(time_device_end - time_device_start, 5), "s")
-            ########
+            print_time("Time to device :", debug_level, "DEBUG", time_device_start, 6)
 
-            optimizer.zero_grad()
-
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_pre_net = time.time()
-            else:
-                time_pre_net = None
-            ########
+            time_pre_net = time.time()
 
             y = net(fragments)
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_post_net = time.time()
-                print("Time through net :", round(time_post_net - time_pre_net, 3), "s")
-            ########
+            time_pre_synth = print_time("Time through net :", debug_level, "INFO", time_pre_net, 3)
 
             f0s = fragments["f0"][:, :, 0]
             a0s = y[:, :, 0]
             aa = y[:, :, 1:]
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_pre_synth = time.time()
-            else:
-                time_pre_synth = None
-            ########
-
             sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_post_synth = time.time()
-                print("Time to synthetize :", round(time_post_synth - time_pre_synth, 3), "s")
-            else:
-                time_post_synth = None
-            ########
+            time_post_synth = print_time("Time to synthetize :", debug_level, "INFO", time_pre_synth, 3)
 
             """ STFT's """
             waveforms = waveforms.to(DEVICE)
-            window = torch.hann_window(STFT_SIZE, device=DEVICE)
 
             squared_modules_synth = compute_stft(sons, FFT_SIZES)
             squared_module_truth = compute_stft(waveforms[:, 0:sons.shape[1]], FFT_SIZES)
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG":
-                time_post_stft = time.time()
-                print("Time to perform stfts :", round(time_post_stft - time_post_synth, 3), "s")
-            else:
-                time_post_stft = None
-            ########
+            time_post_stft = print_time("Time to perform stfts :", debug_level, "INFO", time_post_synth, 3)
+
+            """ Loss & Backpropagation """
 
             loss = spectral_loss(squared_modules_synth, squared_module_truth, FFT_SIZES)
             loss.backward()
             optimizer.step()
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-                time_data_end = time.time()
-            else:
-                time_data_end = None
-            if PRINT_LEVEL == "DEBUG":
-                print("Time to backpropagate :", round(time_data_end - time_post_stft, 3), "s")
-            ########
+            print_time("Time to backpropagate :", debug_level, "INFO", time_post_stft, 3)
 
-            if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
-                print("Loss :", loss.item())
+            print_time("Total time :", debug_level, "INFO", time_data_start, 3)
 
-            # Time #
-            if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-                print("Total time :", round(time_data_end - time_data_start, 3), "s")
-            ########
+            print_info("\n", debug_level, "DEBUG")
+            print_info("Batch Loss : " + str(round(loss.item(), 3)), debug_level, "RUN")
+            print_info("\n", debug_level, "DEBUG")
 
-        # Time #
-        if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN":
-            time_epoch_end = time.time()
-            print("Time of the epoch :", round(time_epoch_end - time_epoch_start, 3), "s\n\n\n------------\n\n\n")
-        ########
+            epoch_loss += loss
 
         torch.save(net.state_dict(), PATH_TO_CHECKPOINT)
+        scheduler.step()
+
+        print_info("\n\n", debug_level, "RUN")
+        print_time("Time of the epoch :", debug_level, "RUN", time_epoch_start, 3)
+        print_info("Epoch Loss : " + str(round(epoch_loss.item() / nb_batchs, 3)), debug_level, "TRAIN")
+        print_info("\n\n\n------------\n\n\n", debug_level, "RUN")
+
 
     #### Save ####
     torch.save(net.state_dict(), PATH_TO_MODEL)
 
-    # Time #
-    if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO" or PRINT_LEVEL == "RUN" or PRINT_LEVEL == "TRAIN":
-        time_end = time.time()
-        print("Time of training :", round((time_end - time_start) // 60), "m", round((time_end - time_start) % 60, 3), "s")
-    ########
+    print_time("Training time :", debug_level, "TRAIN", time_start, 3)
 
-    #### Synth ####
-    for k in range(sons.shape[0]):
-        son_synth = sons[k, :]
-        son_original = waveforms[k][0:son_synth.shape[0]]
-        wav.write(os.path.join("Outputs", str(k) + "_synth.wav"), AUDIO_SAMPLE_RATE,
-                  son_synth.cpu().detach().numpy().astype(np.float32))
-        wav.write(os.path.join("Outputs", str(k) + "_original.wav"), AUDIO_SAMPLE_RATE, son_original.cpu().detach().numpy())
-
+    return
 
 
 if __name__ == "__main__":
     #### Debug settings ####
-    PRINT_LEVEL = "DEBUG"  # Possible modes : DEBUG, INFO, RUN, TRAIN
+    PRINT_LEVEL = "TRAIN"  # Possible modes : DEBUG, INFO, RUN, TRAIN
+    print_info("Starting training with debug level : " + PRINT_LEVEL, PRINT_LEVEL, "TRAIN")
 
     #### Pytorch settings ####
     torch.set_default_tensor_type(torch.FloatTensor)
+    print_info("Working device : " + str(DEVICE), PRINT_LEVEL, "INFO")
 
     #### Net ####
-    net = DDSPNet().float()
-    net = net.to(DEVICE)
-
-
-    if PRINT_LEVEL == "DEBUG" or PRINT_LEVEL == "INFO":
-        print("Working device :", DEVICE)
+    Net = DDSPNet().float()
+    Net = Net.to(DEVICE)
 
     #### Data ####
-    dataset = Dataset()
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATALOADER)
+    Dataset = Dataset()
+    Dataloader = DataLoader(Dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATALOADER)
 
     #### Train ####
-    train(net, dataloader, NUMBER_EPOCHS)
+    train(Net, Dataloader, NUMBER_EPOCHS, PRINT_LEVEL)

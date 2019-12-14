@@ -11,22 +11,18 @@ def debug_level_2_number(debug_level):
     elif debug_level == "DEBUG":
         return 3
     else:
-        return None
-
-def get_time(debug_level, debug_status):
-    if debug_level_2_number(debug_level) <= debug_level_2_number(debug_status):
-        return time.time()
-    else:
-        return None
+        return 100
 
 
 def print_time(message, debug_level, debug_status, time_start, digits):
-    if debug_level_2_number(debug_level) <= debug_level_2_number(debug_status):
-        time_stamp = time.time()
-        print(message, string_time(round(time_stamp - time_start, digits)))
-        return time_stamp
-    else:
-        return None
+    time_stamp = time.time()
+    print_info(message + " " + string_time(round(time_stamp - time_start, digits)), debug_level, debug_status)
+    return time_stamp
+
+
+def print_info(message, debug_level, debug_status):
+    if debug_level_2_number(debug_level) >= debug_level_2_number(debug_status):
+        print(message)
 
 
 def string_time(time_spent):
@@ -45,6 +41,6 @@ def string_time(time_spent):
 if __name__ == "__main__":
     DEBUG_LEVEL = "TRAIN"
     DEBUG_STATUS = "DEBUG"
-    TIME_START = get_time(DEBUG_LEVEL, DEBUG_STATUS)
+    TIME_START = time.time()
     time.sleep(1)
     time_end = print_time("Time spent :", DEBUG_LEVEL, DEBUG_STATUS, TIME_START, 6)
