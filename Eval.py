@@ -4,7 +4,7 @@ from Synthese import synthetize
 
 
 def eval(net, file_idx):
-    f0_filename = sorted(os.listdir(RAW_PATH))[file_idx]
+    f0_filename = sorted(os.listdir(F0_PATH))[file_idx]
     audio_filename = sorted(os.listdir(AUDIO_PATH))[file_idx]
 
     f0 = read_f0(f0_filename)

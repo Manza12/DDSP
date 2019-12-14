@@ -4,29 +4,26 @@ import os
 import torch
 
 ## FOLDER PARAMETERS ##
-TEST = False
-if TEST:
-    AUDIO_PATH = os.path.join("AudioTest")
-    RAW_PATH = os.path.join("RawTest")
-else:
-    AUDIO_PATH = os.path.join("Audio")
-    RAW_PATH = os.path.join("Raw")
+INSTRUMENT = "MyViolin"
+AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
+F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
+FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
+FRAGMENT_CACHE_PATTERN = "{:d}.pth"
 
 
 ## MODELS ##
 PATH_SAVED_MODELS = os.path.join("Models")
-MODEL_CHECKPOINT = "Model_with_Olivier_checkpoint"
-MODEL_NAME = "Model_with_Olivier"
+MODEL_NAME = "Model_" + INSTRUMENT
+MODEL_CHECKPOINT = MODEL_NAME + "_checkpt"
 PATH_TO_CHECKPOINT = os.path.join(PATH_SAVED_MODELS, MODEL_CHECKPOINT + ".pth")
 PATH_TO_MODEL = os.path.join(PATH_SAVED_MODELS, MODEL_NAME + ".pth")
-FRAGMENT_CACHE_PATH = "Cache"
-FRAGMENT_CACHE_PATTERN = "{:d}.pth"
+
 
 ## TRAIN PARAMETERS ##
 SHUFFLE_DATALOADER = True
 BATCH_SIZE = 6
 FFT_SIZES = [2048, 1024, 512, 256, 128, 64]
-NUMBER_EPOCHS = 1000
+NUMBER_EPOCHS = 250
 LEARNING_RATE = 0.001
 
 GPU_ON = True

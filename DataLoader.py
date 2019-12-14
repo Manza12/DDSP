@@ -36,7 +36,7 @@ class Dataset(ParentDataset):
 def compute_cache():
     os.mkdir(FRAGMENT_CACHE_PATH)
 
-    f0_filenames = sorted(os.listdir(RAW_PATH))
+    f0_filenames = sorted(os.listdir(F0_PATH))
     audio_filenames = sorted(os.listdir(AUDIO_PATH))
 
     item_i = 0
@@ -86,7 +86,7 @@ def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
     return inputs, waveform
 
 def read_f0(file_name):
-    file_path = os.path.join(RAW_PATH, file_name)
+    file_path = os.path.join(F0_PATH, file_name)
     raw_data = pd.read_csv(file_path, header=0)
     raw_array = raw_data.to_numpy()
     f0 = raw_array[:-1, 1]
