@@ -4,11 +4,10 @@ import os
 from scipy.io.wavfile import read
 from torch.utils.data import Dataset as ParentDataset
 
-import librosa as li
 import numpy as np
 import pandas as pd
 
-from Parameters import AUDIO_PATH, RAW_PATH, FRAME_SAMPLE_RATE, FRAGMENTS_PER_FILE, AUDIO_SAMPLE_RATE, FRAME_LENGTH
+from Parameters import *
 
 #### Debug settings ####
 PRINT_LEVEL = "INFO"  # Possible modes : DEBUG, INFO, RUN
@@ -34,63 +33,36 @@ class Dataset(ParentDataset):
         if PRINT_LEVEL == "DEBUG":
             print("Getting item", idx)
 
-        file_idx = int(idx / 30)
-        fragment_idx = idx % 30
+        nb_frags = AUDIOFILE_DURATION // FRAGMENT_DURATION
+        file_idx = int(idx / nb_frags)
+        fragment_idx = idx % nb_frags
 
         f0_file_name = self.raw_files[file_idx]
         if PRINT_LEVEL == "DEBUG":
             print("F0 file name :", f0_file_name)
 
-        f0_full = f0_2_tensor(f0_file_name)
+        f0_full = torch.tensor(read_f0(f0_file_name)).float()
         f0 = f0_full[int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
                                    int((fragment_idx+1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
-        f0 = f0.reshape((f0.shape[0], 1)).float()
+        f0 = f0.unsqueeze(-1)
 
         audio_file_name = self.audio_files[file_idx]
         if PRINT_LEVEL == "DEBUG":
             print("Audio file name :", audio_file_name)
 
-        [lo_full, waveform_full] = audio_2_loudness_tensor(audio_file_name)
-        lo = lo_full[0, int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
+        lo_full = torch.tensor(read_lo(audio_file_name)).float()
+        lo = lo_full[int(fragment_idx * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE):
                                    int((fragment_idx + 1) * 60 * FRAME_SAMPLE_RATE / FRAGMENTS_PER_FILE)].float()
+        lo = lo.unsqueeze(-1)
+
+        waveform_full = torch.tensor(read_waveform(audio_file_name))
         waveform = waveform_full[int(fragment_idx * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE):
                                    int((fragment_idx + 1) * 60 * AUDIO_SAMPLE_RATE / FRAGMENTS_PER_FILE)]
-
-        lo = lo.reshape((lo.shape[0], 1)).float()
 
         fragment = {'f0': f0, 'lo': lo}
 
         return fragment, waveform
 
-
-def f0_2_tensor(file_name):
-    file_path = os.path.join(RAW_PATH, file_name)
-    raw_data = pd.read_csv(file_path, header=0)
-    raw_array = raw_data.to_numpy()
-    frecuency_data = raw_array[:-1, 1]
-    frecuency_tensor = torch.from_numpy(frecuency_data)
-
-    return frecuency_tensor
-
-
-def audio_2_loudness_tensor(file_name):
-    file_path = os.path.join(AUDIO_PATH, file_name)
-    [fs, waveform] = read(file_path)
-
-    assert fs == AUDIO_SAMPLE_RATE
-
-    dtype = waveform.dtype
-    if np.issubdtype(dtype, np.integer):
-        waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
-
-    frame_length = int(fs / FRAME_SAMPLE_RATE)
-    loudness_array = li.feature.rms(waveform, hop_length=frame_length, frame_length=frame_length)
-    loudness_tensor = torch.from_numpy(np.log(loudness_array + 1e-10))
-
-    return loudness_tensor, waveform
-
-
-#### Olivier's ####
 
 
 def read_f0(file_name):
