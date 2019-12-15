@@ -34,7 +34,7 @@ def test():
     import scipy.io.wavfile
 
     net = DDSPNet().float()
-    net.load_state_dict(torch.load(os.path.join("Models", "Model_with_Olivier_checkpoint.pth")))
+    net.load_state_dict(torch.load(PATH_TO_CHECKPOINT))
     waveform_synth, waveform_truth = eval(net, file_idx=0)
 
     scipy.io.wavfile.write(os.path.join("Outputs", "eval_syn.wav"), AUDIO_SAMPLE_RATE, waveform_synth)
