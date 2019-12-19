@@ -4,7 +4,7 @@ import os
 import torch
 
 ## FOLDER PARAMETERS ##
-INSTRUMENT = "MyViolin"
+INSTRUMENT = "Sax"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)

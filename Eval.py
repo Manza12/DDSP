@@ -37,8 +37,8 @@ def test():
     net.load_state_dict(torch.load(PATH_TO_CHECKPOINT))
     waveform_synth, waveform_truth = eval(net, file_idx=0)
 
-    scipy.io.wavfile.write(os.path.join("Outputs", "eval_syn.wav"), AUDIO_SAMPLE_RATE, waveform_synth)
-    scipy.io.wavfile.write(os.path.join("Outputs", "eval_ref.wav"), AUDIO_SAMPLE_RATE, waveform_truth)
+    scipy.io.wavfile.write(os.path.join("Outputs", "Eval_" + INSTRUMENT + "_syn.wav"), AUDIO_SAMPLE_RATE, waveform_synth)
+    scipy.io.wavfile.write(os.path.join("Outputs", "Eval_" + INSTRUMENT + "_ref.wav"), AUDIO_SAMPLE_RATE, waveform_truth)
 
 if __name__ == "__main__":
     test()
