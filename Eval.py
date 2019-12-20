@@ -1,6 +1,7 @@
 from Parameters import *
 from DataLoader import read_f0, read_lo, read_waveform
 from Synthese import synthetize
+from Noise import synthetize_bruit
 
 
 def eval(net, file_idx):
@@ -23,9 +24,14 @@ def eval(net, file_idx):
 
     f0 = x["f0"].squeeze(-1)
     a0 = y[:, :, 0]
-    aa = y[:, :, 1:]
+    aa = y[:, :, 1:NUMBER_HARMONICS + 1]
 
-    waveform = synthetize(a0, f0, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, "cpu")
+    if NOISE_ON:
+        hs = y[:, :, NUMBER_HARMONICS + 2:NUMBER_HARMONICS + 2 + NUMBER_NOISE_BANDS]
+        waveform = synthetize_bruit(a0, f0, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, "cpu")
+    else:
+        waveform = synthetize(a0, f0, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, "cpu")
+
     waveform = waveform.numpy().reshape(-1)
     return waveform, waveform_truth
 
