@@ -27,7 +27,7 @@ def print_info(message, debug_level, debug_status):
 
 def string_time(time_spent, digits):
     seconds = round(time_spent % 60, digits)
-    minutes = round(time_spent // 60)
+    minutes = round(time_spent // 60) % 60
     hours = round(time_spent // 3600)
 
     if minutes == 0 and hours == 0:

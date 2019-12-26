@@ -101,7 +101,7 @@ def train(net, dataloader, number_epochs, debug_level):
 
 if __name__ == "__main__":
     #### Debug settings ####
-    PRINT_LEVEL = "RUN"  # Possible modes : DEBUG, INFO, RUN, TRAIN
+    PRINT_LEVEL = "TRAIN"  # Possible modes : DEBUG, INFO, RUN, TRAIN
     print_info("Starting training with debug level : " + PRINT_LEVEL, PRINT_LEVEL, "TRAIN")
 
     #### Pytorch settings ####

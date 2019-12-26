@@ -27,7 +27,7 @@ def eval(net, file_idx):
     aa = y[:, :, 1:NUMBER_HARMONICS + 1]
 
     if NOISE_ON:
-        hs = y[:, :, NUMBER_HARMONICS + 2:NUMBER_HARMONICS + 2 + NUMBER_NOISE_BANDS]
+        hs = y[:, :, 2 + NUMBER_HARMONICS : 2 + NUMBER_HARMONICS + NUMBER_NOISE_BANDS]
         waveform = synthetize_bruit(a0, f0, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, "cpu")
     else:
         waveform = synthetize(a0, f0, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, "cpu")

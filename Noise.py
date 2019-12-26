@@ -59,6 +59,7 @@ def synthetize_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
     waveforms = torch.sum(waveforms, dim=2)
 
     """ Partie bruit """
+    hs = func.relu(hs)  # we impose hs be positive
     bruits = filter_noise(create_white_noise(FRAME_LENGTH, device=device), hs, device=device)
     bruits_list = torch.split(bruits, 1, dim=1)
     bruit = torch.cat(bruits_list[0:-1], dim=-1)
