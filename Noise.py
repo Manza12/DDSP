@@ -7,7 +7,7 @@ import os
 from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
 
 
-def synthetize_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
+def synthetize_bruit(a0s, f0s, aa, hs, h0s, frame_length, sample_rate, device):
     assert a0s.size() == f0s.size()
     assert a0s.size()[1] == aa.size()[1]
 
@@ -60,7 +60,8 @@ def synthetize_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
 
     """ Partie bruit """
     hs = func.relu(hs)  # we impose hs be positive
-    bruits = filter_noise(create_white_noise(FRAME_LENGTH, device=device), hs, device=device)
+    h0s = func.relu(h0s)  # we impose h0s be positive
+    bruits = filter_noise(create_white_noise(FRAME_LENGTH, device=device), hs, h0s, device=device)
     bruits_list = torch.split(bruits, 1, dim=1)
     bruit = torch.cat(bruits_list[0:-1], dim=-1)
     bruit = torch.squeeze(bruit, dim=1)
@@ -69,7 +70,7 @@ def synthetize_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
     return waveforms
 
 
-def create_white_noise(samples, write=False, nom="white_noise", device=DEVICE):
+def create_white_noise(samples, write=False, nom="white_noise", device="cpu"):
     noise_time = torch.tensor(np.float32(np.random.uniform(-1, 1, samples)), device=device)
     if write:
         wav.write(os.path.join("Outputs", nom + ".wav"), AUDIO_SAMPLE_RATE, noise_time.numpy())
@@ -77,8 +78,11 @@ def create_white_noise(samples, write=False, nom="white_noise", device=DEVICE):
     return noise_time
 
 
-def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", device=DEVICE):
-    filter_freq_complex = torch.stack((filter_freq, torch.zeros(filter_freq.shape, device=device)), dim=-1)
+def filter_noise(noise_time, filter_freq, noise_amplitude, write=False, nom="filtered_noise", device=DEVICE):
+    filter_freq_mean = torch.unsqueeze(torch.sum(filter_freq, -1), -1)
+    filter_freq_normalized = filter_freq / filter_freq_mean
+    filter_freq_scaled = filter_freq_normalized * torch.unsqueeze(noise_amplitude, -1)
+    filter_freq_complex = torch.stack((filter_freq_scaled, torch.zeros(filter_freq.shape, device=device)), dim=-1)
     filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
     hann_window = torch.hann_window(filter_time.shape[-1], device=device)
     hann_window = torch.unsqueeze(hann_window, 0)
@@ -113,13 +117,14 @@ if __name__ == "__main__":
     noise = create_white_noise(160)
 
     filter_transfer_ampl = torch.zeros(65)
+    filter_loudness = torch.ones(65)
     mu = 30
     filter_transfer_ampl[mu] = 1
     filter_transfer_ampl[mu - 1] = 0.5
     filter_transfer_ampl[mu + 1] = 0.5
 
 
-    filtered_noise = filter_noise(noise, filter_transfer_ampl)
+    filtered_noise = filter_noise(noise, filter_transfer_ampl, 65)
 
     sound = np.zeros(16000)
     for i in range(100):

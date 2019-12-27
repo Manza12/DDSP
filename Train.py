@@ -11,12 +11,12 @@ from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES, \
-    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS
+    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE
 
 
 def train(net, dataloader, number_epochs, debug_level):
     optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.98)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, SCHEDULER_RATE)
 
     time_start = time.time()
 
@@ -52,7 +52,8 @@ def train(net, dataloader, number_epochs, debug_level):
 
             if NOISE_ON:
                 hs = y[:, :, NUMBER_HARMONICS+2:NUMBER_HARMONICS+2+NUMBER_NOISE_BANDS]
-                sons = synthetize_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                h0s = y[:, :, NUMBER_HARMONICS + 2 + NUMBER_NOISE_BANDS + 1]
+                sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
             else:
                 sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
 
@@ -86,7 +87,7 @@ def train(net, dataloader, number_epochs, debug_level):
         scheduler.step()
 
         print_info("\n\n", debug_level, "RUN")
-        print_time("Time of the epoch :", debug_level, "RUN", time_epoch_start, 3)
+        print_time("Time of the epoch :", debug_level, "TRAIN", time_epoch_start, 3)
         print_info("Epoch Loss : " + str(round(epoch_loss.item() / nb_batchs, 3)), debug_level, "TRAIN")
         print_info("\n\n\n------------\n\n\n", debug_level, "RUN")
 
