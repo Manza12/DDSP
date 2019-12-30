@@ -13,8 +13,8 @@ def spectral_loss(stft_all, stft_truth_all, fft_sizes):
         stft_log = torch.log(stft + eps)
         stft_truth_log = torch.log(stft_truth + eps)
 
-        loss_lin = F.mse_loss(stft, stft_truth, reduction="mean")
-        loss_log = F.mse_loss(stft_log, stft_truth_log, reduction="mean")
+        loss_lin = F.l1_loss(stft, stft_truth, reduction="mean")
+        loss_log = F.l1_loss(stft_log, stft_truth_log, reduction="mean")
 
         losses[i] = loss_lin + loss_log
 

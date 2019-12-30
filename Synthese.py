@@ -33,11 +33,11 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
     phases_acc = torch.cumsum(phases, dim=1)
 
     # denormalize amplitudes with a0
-    aa_sum = torch.sum(aa, dim=2)
+    # aa_sum = torch.sum(aa, dim=2)
     # avoid 0-div when all amplitudes are 0
-    aa_sum[aa_sum == 0.] = 1.
-    aa_norm = aa / aa_sum.unsqueeze(-1)
-    aa = aa_norm * a0s.unsqueeze(-1)
+    # aa_sum[aa_sum == 0.] = 1.
+    # aa_norm = aa / aa_sum.unsqueeze(-1)
+    aa = aa * a0s.unsqueeze(-1)
 
     # interpolate amplitudes over time
     # TODO use Hamming window instead? (cf ddsp paper)
