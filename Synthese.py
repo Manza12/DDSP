@@ -66,9 +66,8 @@ def synthetize_smooth(a0s, f0s, aa, frame_length, sample_rate, device):
     nb_bounds = f0s.size()[1]
     signal_length = (nb_bounds - 1) * frame_length
 
-    # interpolate f0 over time
-    # TODO paper mentions bilinear interpolation ?
-    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
+    # interpolate f0 over time (bilinear)
+    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='bilinear', align_corners=True)
     f0s = f0s.squeeze(1)
 
     # multiply interpolated f0s by harmonic ranks to get all freqs
@@ -90,7 +89,7 @@ def synthetize_smooth(a0s, f0s, aa, frame_length, sample_rate, device):
     #Hamming window interpolation (upsampling) of amplitudes with 50% overlap    
     window = torch.hann_window(2*frame_length, periodic=False)
     aa_inter = torch.zeros([BATCH_SIZE, signal_length + 2*frame_length, nb_harms])
-    # add amplitude-scaled hammming windows to output (inter)
+    # add amplitude-scaled hammming windows to output (aa_inter)
     for i in range(BATCH_SIZE):
         for j in range(nb_bounds):
             scaled_ham_frame = aa[i, j, :].unsqueeze(1) * window.unsqueeze(0)
@@ -99,9 +98,6 @@ def synthetize_smooth(a0s, f0s, aa, frame_length, sample_rate, device):
     
     # prevent aliasing
     aa[ff >= sample_rate / 2.1] = 0.
-
-    # print(torch.cuda.memory_allocated(device=DEVICE))
-    # print(torch.cuda.memory_cached(device=DEVICE))
 
     torch.cuda.empty_cache()
 
