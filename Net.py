@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import LINEAR_OUT_DIM, OUTPUT_DIM, HIDDEN_DIM, USE_SIGMOID, SIGMOID_EXP
+from Parameters import LINEAR_OUT_DIM, NUMBER_HARMONICS, HIDDEN_DIM, USE_SIGMOID, LINEAR_ADDITIVE_DIM, LINEAR_NOISE_DIM,\
+    SIGMOID_EXP, NUMBER_NOISE_BANDS
 
 
 class MLP(nn.Module):
@@ -37,7 +38,8 @@ class DDSPNet(nn.Module):
         self.mlp_lo = MLP(1, LINEAR_OUT_DIM)
         self.gru = nn.GRU(2*LINEAR_OUT_DIM, HIDDEN_DIM, batch_first=True)
         self.mlp = MLP(HIDDEN_DIM, HIDDEN_DIM)
-        self.dense = nn.Linear(HIDDEN_DIM, OUTPUT_DIM)
+        self.dense_additive = nn.Linear(LINEAR_ADDITIVE_DIM, NUMBER_HARMONICS+1)
+        self.dense_noise = nn.Linear(LINEAR_NOISE_DIM, NUMBER_NOISE_BANDS+1)
 
     def forward(self, x):
         x_f0 = x["f0"]
@@ -51,9 +53,12 @@ class DDSPNet(nn.Module):
         y = torch.cat((y_f0, y_lo), dim=2)
         y = self.gru(y)[0]
         y = self.mlp(y)
-        y = self.dense(y)
+        y_additive = y[:, :, 0:LINEAR_ADDITIVE_DIM]
+        y_noise = y[:, :, LINEAR_ADDITIVE_DIM:LINEAR_ADDITIVE_DIM+LINEAR_NOISE_DIM]
+        y_additive = self.dense_additive(y_additive)
+        y_noise = self.dense_noise(y_noise)
 
         if USE_SIGMOID:
             y = 2.0 * torch.sigmoid(y) ** 2.3 + 1e-7
 
-        return y
+        return y_additive, y_noise

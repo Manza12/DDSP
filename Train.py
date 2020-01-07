@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES, \
-    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE
+    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE  #, ADDITIVE_OUTPUT_DIM, NOISE_OUTPUT_DIM
 
 
 def train(net, dataloader, number_epochs, debug_level):
@@ -42,17 +42,17 @@ def train(net, dataloader, number_epochs, debug_level):
 
             time_pre_net = time.time()
 
-            y = net(fragments)
+            y_additive, y_noise = net(fragments)
 
             time_pre_synth = print_time("Time through net :", debug_level, "INFO", time_pre_net, 3)
 
             f0s = fragments["f0"][:, :, 0]
-            a0s = y[:, :, 0]
-            aa = y[:, :, 1:NUMBER_HARMONICS+1]
+            a0s = y_additive[:, :, 0]
+            aa = y_additive[:, :, 1:NUMBER_HARMONICS + 1]
 
             if NOISE_ON:
-                hs = y[:, :, NUMBER_HARMONICS+2:NUMBER_HARMONICS+2+NUMBER_NOISE_BANDS]
-                h0s = y[:, :, NUMBER_HARMONICS + 2 + NUMBER_NOISE_BANDS + 1]
+                h0s = y_noise[:, :, 0]
+                hs = y_noise[:, :, 1:NUMBER_NOISE_BANDS + 1]
                 sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
             else:
                 sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
