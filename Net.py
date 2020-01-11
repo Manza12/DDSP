@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import LINEAR_OUT_DIM, NUMBER_HARMONICS, HIDDEN_DIM, USE_SIGMOID, LINEAR_ADDITIVE_DIM, LINEAR_NOISE_DIM,\
-    SIGMOID_EXP, NUMBER_NOISE_BANDS
+from Parameters import LINEAR_OUT_DIM, NUMBER_HARMONICS, HIDDEN_DIM, LINEAR_ADDITIVE_DIM, LINEAR_NOISE_DIM,\
+    NUMBER_NOISE_BANDS
 
 
 class MLP(nn.Module):
