@@ -1,9 +1,10 @@
 import torch
 import time
+import torch.nn.functional as func
 
 from Net import DDSPNet
 from DataLoader import Dataset
-from Synthese import synthetize
+from Synthese import synthetize_smooth, synthetize
 from Noise import synthetize_bruit
 from Time import print_time, print_info
 from Loss import compute_stft, spectral_loss
@@ -11,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES, \
-    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE  #, ADDITIVE_OUTPUT_DIM, NOISE_OUTPUT_DIM
+    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE, HANNING_SMOOTHING  #, ADDITIVE_OUTPUT_DIM, NOISE_OUTPUT_DIM
 
 
 def train(net, dataloader, number_epochs, debug_level):
@@ -47,15 +48,22 @@ def train(net, dataloader, number_epochs, debug_level):
             time_pre_synth = print_time("Time through net :", debug_level, "INFO", time_pre_net, 3)
 
             f0s = fragments["f0"][:, :, 0]
+
             a0s = y_additive[:, :, 0]
+            # a0s = func.relu(a0s)
+
             aa = y_additive[:, :, 1:NUMBER_HARMONICS + 1]
+            # aa = func.relu(aa)
 
             if NOISE_ON:
                 h0s = y_noise[:, :, 0]
                 hs = y_noise[:, :, 1:NUMBER_NOISE_BANDS + 1]
                 sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
             else:
-                sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                if HANNING_SMOOTHING:
+                    sons = synthetize_smooth(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                else:
+                    sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
 
             time_post_synth = print_time("Time to synthetize :", debug_level, "INFO", time_pre_synth, 3)
 
@@ -85,6 +93,8 @@ def train(net, dataloader, number_epochs, debug_level):
 
         torch.save(net.state_dict(), PATH_TO_CHECKPOINT)
         scheduler.step()
+
+        torch.cuda.empty_cache()
 
         print_info("\n\n", debug_level, "RUN")
         print_time("Time of the epoch :", debug_level, "TRAIN", time_epoch_start, 3)
