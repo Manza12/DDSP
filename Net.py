@@ -58,7 +58,4 @@ class DDSPNet(nn.Module):
         y_additive = torch.sigmoid(self.dense_additive(y_additive))
         y_noise = self.dense_noise(y_noise)
 
-        if USE_SIGMOID:
-            y = 2.0 * torch.sigmoid(y) ** 2.3 + 1e-7
-
         return y_additive, y_noise
