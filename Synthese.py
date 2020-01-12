@@ -46,9 +46,8 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     aa_norm = aa / aa_sum.unsqueeze(-1)
     aa = aa_norm * a0s.unsqueeze(-1)
 
-    aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
-                          align_corners=True)
-    aa = aa.squeeze(1)
+    aa = func.interpolate(aa.transpose(1, 2), size=signal_length, mode='linear', align_corners=True)
+    aa = aa.transpose(1, 2)
 
     # prevent aliasing
     aa[ff >= sample_rate / 2.1] = 0.
