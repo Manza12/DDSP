@@ -38,6 +38,7 @@ def compute_cache():
 
     f0_filenames = sorted(os.listdir(F0_PATH))
     audio_filenames = sorted(os.listdir(AUDIO_PATH))
+    mean_lo = get_mean_lo(audio_filenames)
 
     item_i = 0
     for audio_filename, f0_filename in zip(audio_filenames, f0_filenames):
@@ -48,12 +49,15 @@ def compute_cache():
         f0_full = read_f0(f0_filename)
         lo_full = read_lo(audio_filename)
 
+        # center loudness around mean value
+        lo_full -= mean_lo
+
         waveform_full = read_waveform(audio_filename)
 
         for frag_i in range(FRAGMENTS_PER_FILE):
-            inputs, stfts = compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i)
+            inputs, waveforms = compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i)
             frag_path = os.path.join(FRAGMENT_CACHE_PATH, FRAGMENT_CACHE_PATTERN.format(item_i))
-            torch.save((inputs, stfts), frag_path)
+            torch.save((inputs, waveforms), frag_path)
             item_i += 1
 
 def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
@@ -116,6 +120,12 @@ def read_lo(file_name):
     lo = np.log(lo + np.finfo(np.float32).eps)
 
     return lo
+
+def get_mean_lo(audio_filenames):
+    lo_all = [read_lo(f) for f in audio_filenames]
+    lo_all = np.concatenate(lo_all, axis=0)
+    return np.mean(lo_all)
+
 
 def read_waveform(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
