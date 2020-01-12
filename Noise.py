@@ -43,69 +43,6 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", dev
     return noise
 
 
-def synthetize_bruit(a0s, f0s, aa, hs, h0s, frame_length, sample_rate, device):
-    assert a0s.size() == f0s.size()
-    assert a0s.size()[1] == aa.size()[1]
-
-    nb_bounds = f0s.size()[1]
-    signal_length = (nb_bounds - 1) * frame_length
-
-    # interpolate f0 over time
-    # TODO paper mentions bilinear interpolation ?
-    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
-    f0s = f0s.squeeze(1)
-
-    # # interpolate a0 over time
-    # # TODO paper mentions using Hamming window
-    # a0s = func.interpolate(a0s.unsqueeze(1), scale_factor=signal_length / nb_bounds, mode='linear', align_corners=True)
-    # a0s = a0s.squeeze(1)
-
-    # multiply interpolated f0s by harmonic ranks to get all freqs
-    nb_harms = aa.size()[-1]
-    harm_ranks = torch.arange(nb_harms, device=device) + 1
-    ff = f0s.unsqueeze(2) * harm_ranks
-
-    # phase accumulation over time for each freq
-    phases = 2 * np.pi * ff / sample_rate
-    phases_acc = torch.cumsum(phases, dim=1)
-
-    # denormalize amplitudes with a0
-    aa_sum = torch.sum(aa, dim=2)
-    # avoid 0-div when all amplitudes are 0
-    aa_sum[aa_sum == 0.] = 1.
-    aa_norm = aa / aa_sum.unsqueeze(-1)
-    aa = aa_norm * a0s.unsqueeze(-1)
-
-    # interpolate amplitudes over time
-    # TODO use Hamming window instead? (cf ddsp paper)
-    aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
-                          align_corners=True)
-    aa = aa.squeeze(1)
-
-    # prevent aliasing
-    aa[ff >= sample_rate / 2.1] = 0.
-
-    # print(torch.cuda.memory_allocated(device=DEVICE))
-    # print(torch.cuda.memory_cached(device=DEVICE))
-
-    torch.cuda.empty_cache()
-
-    waveforms = aa * torch.cos(phases_acc)
-    # sum over harmonics
-    waveforms = torch.sum(waveforms, dim=2)
-
-    """ Partie bruit """
-    hs = torch.sigmoid(hs)  # we impose hs be positive
-    h0s = torch.sigmoid(h0s)  # we impose h0s be positive
-    bruits = filter_noise_normed(create_white_noise(FRAME_LENGTH, device=device), hs, h0s, device=device)
-    bruits_list = torch.split(bruits, 1, dim=1)
-    bruit = torch.cat(bruits_list[0:-1], dim=-1)
-    bruit = torch.squeeze(bruit, dim=1)
-    waveforms = waveforms + bruit
-
-    return waveforms
-
-
 def create_white_noise(samples, write=False, nom="white_noise", device="cpu"):
     noise_time = torch.tensor(np.float32(np.random.uniform(-1, 1, samples)), device=device)
     if write:

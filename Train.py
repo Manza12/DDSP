@@ -3,15 +3,14 @@ import time
 
 from Net import DDSPNet
 from DataLoader import Dataset
-from Synthese import synthetize_smooth, synthetize, synthetize_additive_plus_bruit
-from Noise import synthetize_bruit
+from Synthese import synthetize_additive_plus_bruit
 from Time import print_time, print_info
 from Loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES, \
-    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE, HANNING_SMOOTHING, SEPARED_NOISE
+    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE
 
 
 def train(net, dataloader, number_epochs, debug_level):
@@ -56,17 +55,11 @@ def train(net, dataloader, number_epochs, debug_level):
 
             if NOISE_ON:
                 hs = y_noise[:, :, 1:NUMBER_NOISE_BANDS + 1]
-                if SEPARED_NOISE:
-                    additive, bruit = synthetize_additive_plus_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
-                    sons = additive + bruit
-                else:
-                    h0s = y_noise[:, :, 0]
-                    sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                additive, bruit = synthetize_additive_plus_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                sons = additive + bruit
             else:
-                if HANNING_SMOOTHING:
-                    sons = synthetize_smooth(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
-                else:
-                    sons = synthetize(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                additive, bruit = synthetize_additive_plus_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                sons = additive
 
             time_post_synth = print_time("Time to synthetize :", debug_level, "INFO", time_pre_synth, 3)
 
