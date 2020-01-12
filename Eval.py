@@ -57,9 +57,9 @@ if __name__ == "__main__":
     #### Charge net ####
     NET = DDSPNet().float()
     if model == "Full":
-        NET.load_state_dict(torch.load(PATH_TO_MODEL))
+        NET.load_state_dict(torch.load(PATH_TO_MODEL, map_location=DEVICE))
     else:
-        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT))
+        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT, map_location=DEVICE))
 
     #### Create and write waveforms ####
     if SEPARED_NOISE:
