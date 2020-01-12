@@ -16,7 +16,7 @@ def evaluation(net, file_idx, device, duration):
     lo = lo[:-1]
     lo = torch.tensor(lo[0:duration * FRAME_SAMPLE_RATE]).unsqueeze(0).unsqueeze(-1)
 
-    waveform_truth = read_waveform(audio_filename)
+    waveform_truth = read_waveform(audio_filename)[0:duration * AUDIO_SAMPLE_RATE]
 
     x = { "f0": f0, "lo": lo }
     with torch.no_grad():
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     file_index = 0
     model = "Checkpoint"  # Options : "Full", "Checkpoint"
     working_device = "cpu"  # Use "cpu" when training at the same time
-    audio_duration = 4  # Duration of the evaluation in seconds
+    audio_duration = 16  # Duration of the evaluation in seconds
 
     #### Charge net ####
     NET = DDSPNet().float()
