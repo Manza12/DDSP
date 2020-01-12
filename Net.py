@@ -56,6 +56,6 @@ class DDSPNet(nn.Module):
         y_additive = y[:, :, 0:LINEAR_ADDITIVE_DIM]
         y_noise = y[:, :, LINEAR_ADDITIVE_DIM:LINEAR_ADDITIVE_DIM+LINEAR_NOISE_DIM]
         y_additive = torch.sigmoid(self.dense_additive(y_additive))
-        y_noise = self.dense_noise(y_noise)
+        y_noise = torch.sigmoid(self.dense_noise(y_noise))
 
         return y_additive, y_noise

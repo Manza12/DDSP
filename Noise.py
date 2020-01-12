@@ -4,7 +4,88 @@ import torch.nn.functional as func
 import scipy.io.wavfile as wav
 import os
 
-from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
+from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE, FRAME_SAMPLE_RATE
+
+
+def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
+    assert a0s.size() == f0s.size()
+    assert a0s.size()[1] == aa.size()[1]
+
+    nb_bounds = f0s.size()[1]
+    signal_length = (nb_bounds - 1) * frame_length
+
+    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
+    f0s = f0s.squeeze(1)
+
+    # multiply interpolated f0s by harmonic ranks to get all freqs
+    nb_harms = aa.size()[-1]
+    harm_ranks = torch.arange(nb_harms, device=device) + 1
+    ff = f0s.unsqueeze(2) * harm_ranks
+
+    # phase accumulation over time for each freq
+    phases = 2 * np.pi * ff / sample_rate
+    phases_acc = torch.cumsum(phases, dim=1)
+
+    # denormalize amplitudes with a0
+    aa_sum = torch.sum(aa, dim=2)
+    # avoid 0-div when all amplitudes are 0
+    aa_sum[aa_sum == 0.] = 1.
+    aa_norm = aa / aa_sum.unsqueeze(-1)
+    aa = aa_norm * a0s.unsqueeze(-1)
+
+    aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
+                          align_corners=True)
+    aa = aa.squeeze(1)
+
+    # prevent aliasing
+    aa[ff >= sample_rate / 2.1] = 0.
+    additive = aa * torch.cos(phases_acc)
+    # sum over harmonics
+    additive = torch.sum(additive, dim=2)
+
+    """ Partie bruit """
+    hs = torch.sigmoid(hs)  # we impose hs be positive
+    noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH, device=device), hs, device=device)
+
+    torch.cuda.empty_cache()
+
+    return additive, noise
+
+
+def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", device=DEVICE):
+    # Noise part
+    new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)
+    noise_time_splited = noise_time.reshape(new_shape)
+    noise_time_splited = noise_time_splited.unsqueeze(0)
+    noise_freq = torch.rfft(noise_time_splited, 1)
+
+    # Filter part
+    filter_freq_complex = torch.stack((filter_freq, torch.zeros(filter_freq.shape, device=device)), dim=-1)
+    filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
+    hann_window = torch.hann_window(filter_time.shape[-1], device=device)
+    hann_window = torch.unsqueeze(hann_window, 0)
+    hann_window = torch.unsqueeze(hann_window, 0)
+    filter_time = filter_time * hann_window
+    filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1, dims=-1)
+    pad = (noise_time_splited.shape[-1] - filter_time.shape[-1]) // 2
+    filter_time = func.pad(filter_time, [pad, pad + 1])
+    filter_freq = torch.rfft(filter_time, 1)
+
+    # Filtered noise
+    filtered_noise_freq = complex_mult_torch(noise_freq, filter_freq)
+    filtered_noise_time = torch.irfft(filtered_noise_freq, 1)[:, :, 0:FRAME_LENGTH]
+
+    noises_list = torch.split(filtered_noise_time, 1, dim=1)
+    noise = torch.cat(noises_list[0:-1], dim=-1)
+    noise = torch.squeeze(noise, dim=1)
+
+    if write:
+        wav.write(os.path.join("Outputs", "Original_Noise" + ".wav"), AUDIO_SAMPLE_RATE, noise_time.cpu().detach().numpy())
+        wav.write(os.path.join("Outputs", nom + ".wav"), AUDIO_SAMPLE_RATE, noise[0, :].cpu().detach().numpy())
+
+    torch.cuda.empty_cache()
+
+    return noise
 
 
 def synthetize_bruit(a0s, f0s, aa, hs, h0s, frame_length, sample_rate, device):
@@ -59,9 +140,9 @@ def synthetize_bruit(a0s, f0s, aa, hs, h0s, frame_length, sample_rate, device):
     waveforms = torch.sum(waveforms, dim=2)
 
     """ Partie bruit """
-    hs = func.relu(hs)  # we impose hs be positive
-    h0s = func.relu(h0s)  # we impose h0s be positive
-    bruits = filter_noise(create_white_noise(FRAME_LENGTH, device=device), hs, h0s, device=device)
+    hs = torch.sigmoid(hs)  # we impose hs be positive
+    h0s = torch.sigmoid(h0s)  # we impose h0s be positive
+    bruits = filter_noise_normed(create_white_noise(FRAME_LENGTH, device=device), hs, h0s, device=device)
     bruits_list = torch.split(bruits, 1, dim=1)
     bruit = torch.cat(bruits_list[0:-1], dim=-1)
     bruit = torch.squeeze(bruit, dim=1)
@@ -78,7 +159,7 @@ def create_white_noise(samples, write=False, nom="white_noise", device="cpu"):
     return noise_time
 
 
-def filter_noise(noise_time, filter_freq, noise_amplitude, write=False, nom="filtered_noise", device=DEVICE):
+def filter_noise_normed(noise_time, filter_freq, noise_amplitude, write=False, nom="filtered_noise", device=DEVICE):
     filter_freq_mean = torch.unsqueeze(torch.sum(filter_freq, -1), -1)
     filter_freq_normalized = filter_freq / filter_freq_mean
     filter_freq_scaled = filter_freq_normalized * torch.unsqueeze(noise_amplitude, -1)
@@ -114,7 +195,7 @@ def complex_mult_torch(z, w):
 
 if __name__ == "__main__":
     noise_sound = create_white_noise(16000, write=True)
-    noise = create_white_noise(160)
+    NOISE = create_white_noise(160)
 
     filter_transfer_ampl = torch.zeros(65)
     filter_loudness = torch.ones(65)
@@ -124,7 +205,7 @@ if __name__ == "__main__":
     filter_transfer_ampl[mu + 1] = 0.5
 
 
-    filtered_noise = filter_noise(noise, filter_transfer_ampl, 65)
+    filtered_noise = filter_noise_normed(NOISE, filter_transfer_ampl, 65)
 
     sound = np.zeros(16000)
     for i in range(100):

@@ -1,18 +1,17 @@
 import torch
 import time
-import torch.nn.functional as func
 
 from Net import DDSPNet
 from DataLoader import Dataset
 from Synthese import synthetize_smooth, synthetize
-from Noise import synthetize_bruit
+from Noise import synthetize_bruit, synthetize_additive_plus_bruit
 from Time import print_time, print_info
 from Loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
     DEVICE, SHUFFLE_DATALOADER, BATCH_SIZE, LEARNING_RATE, PATH_TO_CHECKPOINT, FFT_SIZES, \
-    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE, HANNING_SMOOTHING  #, ADDITIVE_OUTPUT_DIM, NOISE_OUTPUT_DIM
+    NUMBER_HARMONICS, NOISE_ON, NUMBER_NOISE_BANDS, SCHEDULER_RATE, HANNING_SMOOTHING, SEPARED_NOISE
 
 
 def train(net, dataloader, number_epochs, debug_level):
@@ -56,9 +55,13 @@ def train(net, dataloader, number_epochs, debug_level):
             # aa = func.relu(aa)
 
             if NOISE_ON:
-                h0s = y_noise[:, :, 0]
                 hs = y_noise[:, :, 1:NUMBER_NOISE_BANDS + 1]
-                sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                if SEPARED_NOISE:
+                    additive, bruit = synthetize_additive_plus_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
+                    sons = additive + bruit
+                else:
+                    h0s = y_noise[:, :, 0]
+                    sons = synthetize_bruit(a0s, f0s, aa, hs, h0s, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
             else:
                 if HANNING_SMOOTHING:
                     sons = synthetize_smooth(a0s, f0s, aa, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
