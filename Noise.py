@@ -4,7 +4,7 @@ import torch.nn.functional as func
 import scipy.io.wavfile as wav
 import os
 
-from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE, FRAME_SAMPLE_RATE
+from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
 
 
 def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
