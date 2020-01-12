@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as func
 import numpy as np
+import math
 
 from Noise import filter_noise, create_white_noise
 from Parameters import FRAME_LENGTH, DEVICE, BATCH_SIZE, NUMBER_HARMONICS
@@ -26,7 +27,17 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
 
     # phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
+
     phases_acc = torch.cumsum(phases, dim=1)
+
+    # uncomment to solve precision issues
+    # phases_acc = phases
+    # cursor = 0
+    # stride = 256
+    # while cursor < signal_length:
+    #     phases_acc[:,cursor,:] %= (2 * math.pi)
+    #     phases_acc[:,cursor:cursor+stride,:] = torch.cumsum(phases[:,cursor:cursor+stride,:], dim=1)
+    #     cursor += stride - 1
 
     # denormalize amplitudes with a0
     aa_sum = torch.sum(aa, dim=2)
@@ -166,7 +177,7 @@ def synthetize(a0s, f0s, aa, frame_length, sample_rate, device):
     aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
                           align_corners=True)
     aa = aa.squeeze(1)
-    
+
     # prevent aliasing
     aa[ff >= sample_rate / 2.1] = 0.
 
