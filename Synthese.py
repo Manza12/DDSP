@@ -4,7 +4,6 @@ import numpy as np
 
 from Noise import filter_noise, create_white_noise
 from Parameters import FRAME_LENGTH, DEVICE, BATCH_SIZE, NUMBER_HARMONICS
-from Testing import plot_waveform
 
 # RANDOM_PHASES_TRAIN = torch.rand([BATCH_SIZE, 31840, NUMBER_HARMONICS], device=DEVICE)
 # RANDOM_PHASES_EVAL = torch.rand([1, 959840, NUMBER_HARMONICS], device="cpu")
