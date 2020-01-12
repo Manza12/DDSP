@@ -3,8 +3,8 @@ import time
 
 from Net import DDSPNet
 from DataLoader import Dataset
-from Synthese import synthetize_smooth, synthetize
-from Noise import synthetize_bruit, synthetize_additive_plus_bruit
+from Synthese import synthetize_smooth, synthetize, synthetize_additive_plus_bruit
+from Noise import synthetize_bruit
 from Time import print_time, print_info
 from Loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader

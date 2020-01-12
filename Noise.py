@@ -7,51 +7,6 @@ import os
 from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
 
 
-def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
-    assert a0s.size() == f0s.size()
-    assert a0s.size()[1] == aa.size()[1]
-
-    nb_bounds = f0s.size()[1]
-    signal_length = (nb_bounds - 1) * frame_length
-
-    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
-    f0s = f0s.squeeze(1)
-
-    # multiply interpolated f0s by harmonic ranks to get all freqs
-    nb_harms = aa.size()[-1]
-    harm_ranks = torch.arange(nb_harms, device=device) + 1
-    ff = f0s.unsqueeze(2) * harm_ranks
-
-    # phase accumulation over time for each freq
-    phases = 2 * np.pi * ff / sample_rate
-    phases_acc = torch.cumsum(phases, dim=1)
-
-    # denormalize amplitudes with a0
-    aa_sum = torch.sum(aa, dim=2)
-    # avoid 0-div when all amplitudes are 0
-    aa_sum[aa_sum == 0.] = 1.
-    aa_norm = aa / aa_sum.unsqueeze(-1)
-    aa = aa_norm * a0s.unsqueeze(-1)
-
-    aa = func.interpolate(aa.unsqueeze(1), size=(signal_length, nb_harms), mode='bilinear',
-                          align_corners=True)
-    aa = aa.squeeze(1)
-
-    # prevent aliasing
-    aa[ff >= sample_rate / 2.1] = 0.
-    additive = aa * torch.cos(phases_acc)
-    # sum over harmonics
-    additive = torch.sum(additive, dim=2)
-
-    """ Partie bruit """
-    hs = torch.sigmoid(hs)  # we impose hs be positive
-    noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH, device=device), hs, device=device)
-
-    torch.cuda.empty_cache()
-
-    return additive, noise
-
-
 def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", device=DEVICE):
     # Noise part
     new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)

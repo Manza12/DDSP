@@ -1,7 +1,7 @@
 from Parameters import *
 from DataLoader import read_f0, read_lo, read_waveform
-from Synthese import synthetize_smooth, synthetize
-from Noise import synthetize_bruit, synthetize_additive_plus_bruit
+from Synthese import synthetize_smooth, synthetize, synthetize_additive_plus_bruit
+from Noise import synthetize_bruit
 from Net import DDSPNet
 import scipy.io.wavfile
 
@@ -50,12 +50,16 @@ def evaluation(net, file_idx):
 
 
 if __name__ == "__main__":
-    #### File data ####
+    #### Parameters ####
     file_index = 0
+    model = "Checkpoint"  # Options : "Full", "Checkpoint"
 
     #### Charge net ####
     NET = DDSPNet().float()
-    NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT))
+    if model == "Full":
+        NET.load_state_dict(torch.load(PATH_TO_MODEL))
+    else:
+        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT))
 
     #### Create and write waveforms ####
     if SEPARED_NOISE:
