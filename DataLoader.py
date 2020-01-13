@@ -1,12 +1,9 @@
-import torch
-import os
-
-from scipy.io.wavfile import read
-from torch.utils.data import Dataset as ParentDataset
-
+import scipy
+import librosa
 import numpy as np
 import pandas as pd
 
+from torch.utils.data import Dataset as ParentDataset
 from Parameters import *
 
 #### Debug settings ####
@@ -98,9 +95,6 @@ def read_f0(file_name):
 
     return f0
 
-
-import scipy
-import librosa
 
 def read_lo(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
