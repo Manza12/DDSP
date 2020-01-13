@@ -5,7 +5,7 @@ from Net import DDSPNet
 from DataLoader import Dataset
 from Synthese import synthetize_additive_plus_bruit
 from Time import print_time, print_info
-from Loss import compute_stft, spectral_loss
+from Loss import compute_stft, spectral_loss, spectral_loss_separed
 from torch.utils.data import DataLoader
 from torch import optim
 from Parameters import PATH_TO_MODEL, NUMBER_EPOCHS, FRAME_LENGTH, AUDIO_SAMPLE_RATE, \
@@ -69,8 +69,18 @@ def train(net, dataloader, number_epochs, debug_level):
             time_post_stft = print_time("Time to perform stfts :", debug_level, "INFO", time_post_synth, 3)
 
             """ Loss & Backpropagation """
+            if debug_level == "DEBUG":
+                losses_lin, losses_log = spectral_loss_separed(squared_modules_synth, squared_module_truth, FFT_SIZES, DEVICE)
+                print_info("Linear losses : " + str([round(ele.item(), 3) for ele in losses_lin]), debug_level, "DEBUG")
+                print_info("Logarithmic losses : " + str([round(ele.item(), 3) for ele in losses_log]), debug_level, "DEBUG")
+                loss_lin = torch.mean(losses_lin)
+                print_info("Linear Loss : " + str(round(loss_lin.item(), 3)), debug_level, "DEBUG")
+                loss_log = torch.mean(losses_log)
+                print_info("Logarithmic Loss : " + str(round(loss_log.item(), 3)), debug_level, "DEBUG")
+                loss = loss_lin + loss_log
+            else:
+                loss = spectral_loss(squared_modules_synth, squared_module_truth, FFT_SIZES)
 
-            loss = spectral_loss(squared_modules_synth, squared_module_truth, FFT_SIZES)
             loss.backward()
             optimizer.step()
 
