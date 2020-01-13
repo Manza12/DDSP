@@ -3,7 +3,7 @@ import torch.nn.functional as func
 import numpy as np
 
 from Noise import filter_noise, create_white_noise
-from Parameters import FRAME_LENGTH, HAMMING_WINDOW_LENGTH, HANNING_SMOOTHING
+from Parameters import FRAME_LENGTH, HAMMING_WINDOW_LENGTH, HANNING_SMOOTHING, INHARMONIC
 
 
 def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
@@ -15,14 +15,22 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     signal_length = (nb_bounds - 1) * frame_length
 
     """ Additive part """
-    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
-    f0s = f0s.squeeze(1)
-
-    # Multiply interpolated f0s by harmonic ranks to get all freqs
-    nb_harms = aa.size()[-1]
-    harm_ranks = torch.arange(nb_harms, device=device) + 1
-    ff = f0s.unsqueeze(2) * harm_ranks
-
+    # Multiply f0s by harmonic ranks to get all freqs
+    nb_harms = aa.size()[-1] - int(INHARMONIC)
+    harm_ranks = torch.arange(nb_harms, device=device) + 1 
+    
+    if INHARMONIC:
+        #Extraction of inharmonicity factor + interpolation
+        inharm_fact = aa[:,:,-1]
+        aa = aa[:,:,:-1]
+        ff = f0s.unsqueeze(2) * torch.sqrt(1 + inharm_fact.unsqueeze(2) * (harm_ranks)**2) * harm_ranks
+    else:
+        ff = f0s.unsqueeze(2) * harm_ranks
+    
+    ff = func.interpolate(torch.transpose(ff, 1, 2), size=signal_length, mode='linear', align_corners=True)
+    ff = torch.transpose(ff, 1, 2)
+    print(ff.size())
+    
     # Phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
     phases_acc = torch.cumsum(phases, dim=1)

@@ -4,7 +4,7 @@ import os
 import torch
 
 ## FOLDER PARAMETERS ##
-INSTRUMENT = "Sax"
+INSTRUMENT = "Synth"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
@@ -27,7 +27,7 @@ NUMBER_EPOCHS = 500
 LEARNING_RATE = 0.001
 SCHEDULER_RATE = 1
 
-GPU_ON = True
+GPU_ON = False
 CUDA_ON = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if CUDA_ON and GPU_ON else "cpu")
 
@@ -49,6 +49,9 @@ LINEAR_NOISE_DIM = 256
 assert LINEAR_ADDITIVE_DIM + LINEAR_NOISE_DIM <= LINEAR_OUT_DIM
 HIDDEN_DIM = 512
 NUMBER_HARMONICS = 64
+INHARMONIC = True
+if INHARMONIC:
+    NUMBER_HARMONICS += 1
 NUMBER_NOISE_BANDS = 65
 NOISE_ON = True
 SEPARED_NOISE = True
