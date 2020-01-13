@@ -100,7 +100,7 @@ def read_f0(file_name):
 
 
 import scipy
-import librosa as rosa
+import librosa
 
 def read_lo(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
@@ -113,11 +113,8 @@ def read_lo(file_name):
     if np.issubdtype(dtype, np.integer):
         waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
 
-    lo = rosa.feature.rms(waveform, hop_length=FRAME_LENGTH, frame_length=FRAME_LENGTH)
-    lo = lo.flatten()
-    lo = lo.astype(np.float32)
-
-    lo = np.log(lo + np.finfo(np.float32).eps)
+    stft = abs(librosa.stft(waveform, FRAME_LENGTH * 4, FRAME_LENGTH)) ** 2
+    lo = stft.sum(axis=0, keepdims=True)
 
     return lo
 
