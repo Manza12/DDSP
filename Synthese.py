@@ -33,7 +33,14 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     
     # Phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
-    phases_acc = torch.cumsum(phases, dim=1)
+    phases_acc = phases
+    cursor = 0
+    stride = 256
+    while cursor < signal_length:
+        phases_acc[:,cursor,:] %= (2 * np.pi)
+        phases_acc[:,cursor:cursor+stride,:] = torch.cumsum(phases[:,cursor:cursor+stride,:], dim=1)
+        cursor += stride - 1
+    # phases_acc = torch.cumsum(phases, dim=1)
 
     # Denormalize amplitudes with a0
     aa_sum = torch.sum(aa, dim=2)
