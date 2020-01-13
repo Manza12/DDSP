@@ -1,5 +1,6 @@
 import torch
 from torch.nn import functional as F
+from Parameters import ALPHA
 
 def spectral_loss(stft_all, stft_truth_all, fft_sizes):
     losses = torch.zeros(len(fft_sizes))
@@ -16,7 +17,7 @@ def spectral_loss(stft_all, stft_truth_all, fft_sizes):
         loss_lin = F.l1_loss(stft, stft_truth, reduction="sum")
         loss_log = F.l1_loss(stft_log, stft_truth_log, reduction="sum")
 
-        losses[i] = loss_lin + loss_log
+        losses[i] = loss_lin + ALPHA * loss_log
 
     loss = torch.mean(losses)
     return loss
@@ -39,7 +40,7 @@ def spectral_loss_separed(stft_all, stft_truth_all, fft_sizes, device):
         loss_log = F.l1_loss(stft_log, stft_truth_log, reduction="sum")
 
         losses_lin[i] = loss_lin
-        losses_log[i] = loss_log
+        losses_log[i] = ALPHA * loss_log
 
     return losses_lin, losses_log
 
