@@ -23,13 +23,12 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
         #Extraction of inharmonicity factor + interpolation
         inharm_fact = aa[:,:,-1]
         aa = aa[:,:,:-1]
-        ff = f0s.unsqueeze(2) * torch.sqrt(1 + inharm_fact.unsqueeze(2) * (harm_ranks)**2) * harm_ranks
+        ff = f0s.unsqueeze(2) * torch.sqrt(1 + inharm_fact.unsqueeze(2) * harm_ranks**2) * harm_ranks
     else:
         ff = f0s.unsqueeze(2) * harm_ranks
     
     ff = func.interpolate(torch.transpose(ff, 1, 2), size=signal_length, mode='linear', align_corners=True)
     ff = torch.transpose(ff, 1, 2)
-    print(ff.size())
     
     # Phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
