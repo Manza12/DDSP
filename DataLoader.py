@@ -68,7 +68,7 @@ def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
     f0 = f0.reshape((f0.shape[0], 1))
     f0 = torch.tensor(f0)
 
-    lo = lo_full[f0_lo_start_i:f0_lo_end_i]
+    lo = lo_full[0, f0_lo_start_i:f0_lo_end_i]
     lo = lo.reshape((lo.shape[0], 1))
     lo = torch.tensor(lo)
     inputs = { "f0": f0, "lo": lo }
