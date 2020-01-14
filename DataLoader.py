@@ -68,7 +68,7 @@ def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
     f0 = f0.reshape((f0.shape[0], 1))
     f0 = torch.tensor(f0)
 
-    lo = lo_full[0, f0_lo_start_i:f0_lo_end_i]
+    lo = lo_full[f0_lo_start_i:f0_lo_end_i]
     lo = lo.reshape((lo.shape[0], 1))
     lo = torch.tensor(lo)
     inputs = { "f0": f0, "lo": lo }
@@ -107,10 +107,16 @@ def read_lo(file_name):
     if np.issubdtype(dtype, np.integer):
         waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
 
-    stft = abs(librosa.stft(waveform, FRAME_LENGTH * 4, FRAME_LENGTH)) ** 2
-    lo = stft.sum(axis=0, keepdims=True)
+    # numpy to torch
+    waveform = torch.tensor(waveform)
+
+    stft = torch.stft(waveform, FRAME_LENGTH * 4, hop_length=FRAME_LENGTH, center=True, pad_mode='reflect',
+                      normalized=STFT_NORMALIZED, onesided=True)
+    stft = torch.sum(stft ** 2, dim=-1)
+    lo = torch.sum(stft, dim=0)
 
     return lo
+
 
 def get_mean_lo(audio_filenames):
     lo_all = [read_lo(f) for f in audio_filenames]
