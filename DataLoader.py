@@ -17,7 +17,7 @@ class Dataset(ParentDataset):
     """ F0 and Loudness dataset."""
 
     def __init__(self):
-        if not os.path.isdir(FRAGMENT_CACHE_PATH):
+        if COMPUTE_CACHE or not os.path.isdir(FRAGMENT_CACHE_PATH):
             compute_cache()
 
         self.nb_frags = len(os.listdir(FRAGMENT_CACHE_PATH))
@@ -33,8 +33,12 @@ class Dataset(ParentDataset):
         frag = torch.load(frag_path)
         return frag
 
+
 def compute_cache():
-    os.mkdir(FRAGMENT_CACHE_PATH)
+    try:
+        os.mkdir(FRAGMENT_CACHE_PATH)
+    except OSError:
+        pass
 
     f0_filenames = sorted(os.listdir(F0_PATH))
     audio_filenames = sorted(os.listdir(AUDIO_PATH))
@@ -51,6 +55,10 @@ def compute_cache():
 
         # center loudness around mean value
         lo_full -= mean_lo
+
+        # import matplotlib.pyplot as plt
+        # plt.plot(lo_full)
+        # plt.show()
 
         waveform_full = read_waveform(audio_filename)
 
@@ -73,7 +81,7 @@ def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
 
     lo = lo_full[f0_lo_start_i:f0_lo_end_i]
     lo = lo.reshape((lo.shape[0], 1))
-    lo = torch.tensor(lo)
+    # lo = torch.tensor(lo)
     inputs = { "f0": f0, "lo": lo }
 
     waveform_start_i = frag_i * waveform_stride
@@ -89,6 +97,7 @@ def compute_fragment_cache(f0_full, lo_full, waveform_full, frag_i):
 
     return inputs, waveform
 
+
 def read_f0(file_name):
     file_path = os.path.join(F0_PATH, file_name)
     raw_data = pd.read_csv(file_path, header=0)
@@ -100,7 +109,9 @@ def read_f0(file_name):
 
 
 import scipy
+import scipy.signal as sg
 import librosa as rosa
+
 
 def read_lo(file_name):
     file_path = os.path.join(AUDIO_PATH, file_name)
@@ -113,13 +124,33 @@ def read_lo(file_name):
     if np.issubdtype(dtype, np.integer):
         waveform = waveform.astype(np.float32) / np.iinfo(dtype).max
 
-    lo = rosa.feature.rms(waveform, hop_length=FRAME_LENGTH, frame_length=FRAME_LENGTH)
-    lo = lo.flatten()
+    # lo = rosa.feature.rms(waveform, hop_length=FRAME_LENGTH, frame_length=FRAME_LENGTH)
+    # lo = lo.flatten()
+    # lo = lo.astype(np.float32)
+    # lo = np.log(lo + np.finfo(np.float32).eps)
+
+    waveform = torch.tensor(waveform)
+
+    stft = torch.stft(waveform, FRAME_LENGTH * 4, hop_length=FRAME_LENGTH, center=True, pad_mode='reflect',
+                      normalized=STFT_NORMALIZED, onesided=True)
+    stft = torch.sum(stft ** 2, dim=-1)
+    lo = torch.sum(stft, dim=0)
+    lo = torch.log(lo + np.finfo(np.float32).eps)
+
+    b, a = sg.butter(10, 0.33, btype="low", analog=False)
+    lo = sg.filtfilt(b, a, lo.numpy())
     lo = lo.astype(np.float32)
 
-    lo = np.log(lo + np.finfo(np.float32).eps)
+    # import matplotlib.pyplot as plt
+    # plt.plot(lo)
+    # plt.show()
+
+    # lo[lo <= LOUDNESS_THRESHOLD] = LOUDNESS_THRESHOLD
+
+    lo = torch.from_numpy(np.flip(np.flip(lo, axis=0), axis=0).copy())
 
     return lo
+
 
 def get_mean_lo(audio_filenames):
     lo_all = [read_lo(f) for f in audio_filenames]
