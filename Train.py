@@ -54,7 +54,7 @@ def train(net, dataloader, number_epochs, debug_level):
             # aa = func.relu(aa)
 
             if NOISE_ON:
-                hs = y_noise[:, :, 1:NUMBER_NOISE_BANDS + 1]
+                hs = y_noise[:, :, 0:NUMBER_NOISE_BANDS + 1]
                 additive, bruit = synthetize_additive_plus_bruit(a0s, f0s, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, DEVICE)
                 sons = additive + bruit
             else:

@@ -8,6 +8,14 @@ from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
 
 
 def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", device=DEVICE):
+    # Décomposition
+    filter_lo = filter_freq[:, :, 0]
+    filter_freq = filter_freq[:, :, 1:]
+    hh_sum = torch.sum(filter_freq, dim=2)
+    hh_sum[hh_sum == 0.] = 1.
+    hh_norm = filter_freq / hh_sum.unsqueeze(-1)
+    filter_freq = hh_norm * filter_lo.unsqueeze(-1)
+
     # Noise part
     new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)
     noise_time_splited = noise_time.reshape(new_shape)
@@ -17,11 +25,22 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", dev
     # Filter part
     filter_freq_complex = torch.stack((filter_freq, torch.zeros(filter_freq.shape, device=device)), dim=-1)
     filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
+    filter_time = filter_time.roll(filter_time.shape[-1] // 2)
     hann_window = torch.hann_window(filter_time.shape[-1], device=device)
     hann_window = torch.unsqueeze(hann_window, 0)
     hann_window = torch.unsqueeze(hann_window, 0)
     filter_time = filter_time * hann_window
-    filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1, dims=-1)
+
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(filter_freq.cpu().detach().numpy()[0, 0, :])  # [0, 100, :]
+    # plt.plot(filter_time.cpu().detach().numpy()[0, 0, :])  # [0, 100, :]
+    # plt.plot(hann_window.cpu().detach().numpy()[0, 0, :])  # [0, 0, :]
+    # plt.xscale("log")
+    # plt.show()
+
+
+    # filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1, dims=-1)
     pad = (noise_time_splited.shape[-1] - filter_time.shape[-1]) // 2
     filter_time = func.pad(filter_time, [pad, pad + 1])
     filter_freq = torch.rfft(filter_time, 1)
@@ -30,9 +49,11 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", dev
     filtered_noise_freq = complex_mult_torch(noise_freq, filter_freq)
     filtered_noise_time = torch.irfft(filtered_noise_freq, 1)[:, :, 0:FRAME_LENGTH]
 
-    noises_list = torch.split(filtered_noise_time, 1, dim=1)
-    noise = torch.cat(noises_list[0:-1], dim=-1)
-    noise = torch.squeeze(noise, dim=1)
+    noise = filtered_noise_time.reshape([filtered_noise_time.shape[0], -1])
+    noise = noise[:, :-FRAME_LENGTH]
+    # noises_list = torch.split(filtered_noise_time, 1, dim=1)
+    # noise = torch.cat(noises_list[0:-1], dim=-1)
+    # noise = torch.squeeze(noise, dim=1)
 
     if write:
         wav.write(os.path.join("Outputs", "Original_Noise" + ".wav"), AUDIO_SAMPLE_RATE, noise_time.cpu().detach().numpy())
@@ -87,20 +108,24 @@ def complex_mult_torch(z, w):
 
 if __name__ == "__main__":
     noise_sound = create_white_noise(16000, write=True)
-    NOISE = create_white_noise(160)
+    duration = 1  # en secondes
+    length = duration * AUDIO_SAMPLE_RATE
+    NOISE = create_white_noise(length)
 
     filter_transfer_ampl = torch.zeros(65)
-    filter_loudness = torch.ones(65)
-    mu = 30
-    filter_transfer_ampl[mu] = 1
-    filter_transfer_ampl[mu - 1] = 0.5
-    filter_transfer_ampl[mu + 1] = 0.5
+    filter_transfer_ampl[20:30] = torch.linspace(1, 0, 10)
+    filter_transfer_ampl[10:20] = torch.linspace(0, 1, 10)
+    filter_transfer_ampl = filter_transfer_ampl.expand(1, length // FRAME_LENGTH, 65)  # hamming_window(65).expand(1, 100, 65) / 1000
+    # filter_loudness = torch.ones(65)
+    # mu = 30
+    # filter_transfer_ampl[mu] = 1
+    # filter_transfer_ampl[mu - 1] = 0.5
+    # filter_transfer_ampl[mu + 1] = 0.5
 
+    filtered_noise = filter_noise(NOISE, filter_transfer_ampl, device="cpu")
 
-    filtered_noise = filter_noise_normed(NOISE, filter_transfer_ampl, 65)
-
-    sound = np.zeros(16000)
-    for i in range(100):
-        sound[160 * i: 160 * (i+1)] = filtered_noise.numpy()
+    sound = filtered_noise[0].numpy()
+    # for i in range(100):
+    #     sound[160 * i: 160 * (i+1)] = filtered_noise.numpy()
 
     wav.write(os.path.join("Outputs", "filtered_noise" + ".wav"), AUDIO_SAMPLE_RATE, sound)
