@@ -1,8 +1,6 @@
 import numpy as np
-import torch
 import torch.nn.functional as func
 import scipy.io.wavfile as wav
-import os
 
 from parameters import *
 
@@ -17,8 +15,6 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
         hh_sum[hh_sum == 0.] = 1.
         hh_norm = filter_freq / hh_sum.unsqueeze(-1)
         filter_freq = hh_norm * filter_lo.unsqueeze(-1)
-    else:
-        filter_freq = filter_freq / NUMBER_NOISE_BANDS
 
     # Noise part
     new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)
@@ -27,18 +23,15 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
     noise_freq = torch.rfft(noise_time_splited, 1)
 
     # Filter part
-    filter_freq_complex = torch.stack((filter_freq,
-                                       torch.zeros(filter_freq.shape,
-                                                   device=device)), dim=-1)
+    filter_imaginary = torch.zeros(filter_freq.shape, device=device)
+    filter_freq_complex = torch.stack((filter_freq, filter_imaginary), dim=-1)
     filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
-    filter_time = filter_time.roll(filter_time.shape[-1] // 2)
-
-    if HAMMING_NOISE:
-        hann_window = torch.hann_window(filter_time.shape[-1], device=device)
-        hann_window = torch.unsqueeze(hann_window, 0)
-        hann_window = torch.unsqueeze(hann_window, 0)
-        filter_time = filter_time * hann_window
-
+    hann_window = torch.hann_window(filter_time.shape[-1], device=device)
+    hann_window = torch.unsqueeze(hann_window, 0)
+    hann_window = torch.unsqueeze(hann_window, 0)
+    filter_time = filter_time * hann_window
+    filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1,
+                             dims=-1)
     pad = (noise_time_splited.shape[-1] - filter_time.shape[-1]) // 2
     filter_time = func.pad(filter_time, [pad, pad + 1])
     filter_freq = torch.rfft(filter_time, 1)
@@ -48,14 +41,15 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
     filtered_noise_time = torch.irfft(filtered_noise_freq, 1)
     filtered_noise_time = filtered_noise_time[:, :, 0:FRAME_LENGTH]
 
-    noise = filtered_noise_time.reshape([filtered_noise_time.shape[0], -1])
-    noise = noise[:, :-FRAME_LENGTH]
+    noises_list = torch.split(filtered_noise_time, 1, dim=1)
+    noise = torch.cat(noises_list[0:-1], dim=-1)
+    noise = torch.squeeze(noise, dim=1)
 
     if write:
-        wav.write(os.path.join("Outputs", "w_noise" + ".wav"),
+        wav.write(os.path.join("Outputs", "Original_Noise" + ".wav"),
                   AUDIO_SAMPLE_RATE, noise_time.cpu().detach().numpy())
-        wav.write(os.path.join("Outputs", nom + ".wav"), AUDIO_SAMPLE_RATE,
-                  noise[0, :].cpu().detach().numpy())
+        wav.write(os.path.join("Outputs", nom + ".wav"),
+                  AUDIO_SAMPLE_RATE, noise[0, :].cpu().detach().numpy())
 
     torch.cuda.empty_cache()
 
