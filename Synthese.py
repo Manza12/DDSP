@@ -48,7 +48,7 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     additive = torch.sum(additive, dim=2)
 
     """ Noise part """
-    hs = torch.sigmoid(hs)  # we impose hs be positive
+    # hs = torch.sigmoid(hs)  # we impose hs be positive
     noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH, device=device), hs, device=device)
 
     # Empty cache
@@ -79,3 +79,18 @@ def interpolate_hamming(tensor, signal_length, frame_length, device):
     interpolation = torch.transpose(interpolation[:, :, 0:signal_length], 1, 2)
 
     return interpolation
+
+
+def reverb(waveform):
+    import scipy
+    import os
+    [fs, ir] = scipy.io.wavfile.read(os.path.join("Inputs", "ir_edited.wav"))
+
+    # int to float
+    dtype = ir.dtype
+    if np.issubdtype(dtype, np.integer):
+        ir = ir.astype(np.float32) / np.iinfo(dtype).max
+
+    waveform_reverb = np.convolve(waveform, ir)[ir.shape[0]-1:ir.shape[0]+waveform.shape[0]] / sum(ir)
+
+    return waveform_reverb

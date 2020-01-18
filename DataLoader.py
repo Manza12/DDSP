@@ -137,9 +137,9 @@ def read_lo(file_name):
     lo = torch.sum(stft, dim=0)
     lo = torch.log(lo + np.finfo(np.float32).eps)
 
-    b, a = sg.butter(10, 0.33, btype="low", analog=False)
-    lo = sg.filtfilt(b, a, lo.numpy())
-    lo = lo.astype(np.float32)
+    # b, a = sg.butter(10, 0.33, btype="low", analog=False)
+    # lo = sg.filtfilt(b, a, lo.numpy())
+    # lo = lo.astype(np.float32)
 
     # import matplotlib.pyplot as plt
     # plt.plot(lo)
@@ -147,7 +147,7 @@ def read_lo(file_name):
 
     # lo[lo <= LOUDNESS_THRESHOLD] = LOUDNESS_THRESHOLD
 
-    lo = torch.from_numpy(np.flip(np.flip(lo, axis=0), axis=0).copy())
+    # lo = torch.from_numpy(np.flip(np.flip(lo, axis=0), axis=0).copy())
 
     return lo
 

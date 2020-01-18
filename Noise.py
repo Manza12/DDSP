@@ -4,17 +4,20 @@ import torch.nn.functional as func
 import scipy.io.wavfile as wav
 import os
 
-from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE
+from Parameters import AUDIO_SAMPLE_RATE, FRAME_LENGTH, DEVICE, HAMMING_NOISE, NOISE_AMPLITUDE, NUMBER_NOISE_BANDS
 
 
 def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", device=DEVICE):
     # Décomposition
-    filter_lo = filter_freq[:, :, 0]
-    filter_freq = filter_freq[:, :, 1:]
-    hh_sum = torch.sum(filter_freq, dim=2)
-    hh_sum[hh_sum == 0.] = 1.
-    hh_norm = filter_freq / hh_sum.unsqueeze(-1)
-    filter_freq = hh_norm * filter_lo.unsqueeze(-1)
+    if NOISE_AMPLITUDE:
+        filter_lo = filter_freq[:, :, 0]
+        filter_freq = filter_freq[:, :, 1:]
+        hh_sum = torch.sum(filter_freq, dim=2)
+        hh_sum[hh_sum == 0.] = 1.
+        hh_norm = filter_freq / hh_sum.unsqueeze(-1)
+        filter_freq = hh_norm * filter_lo.unsqueeze(-1)
+    else:
+        filter_freq = filter_freq / NUMBER_NOISE_BANDS
 
     # Noise part
     new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)
@@ -26,10 +29,12 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise", dev
     filter_freq_complex = torch.stack((filter_freq, torch.zeros(filter_freq.shape, device=device)), dim=-1)
     filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
     filter_time = filter_time.roll(filter_time.shape[-1] // 2)
-    hann_window = torch.hann_window(filter_time.shape[-1], device=device)
-    hann_window = torch.unsqueeze(hann_window, 0)
-    hann_window = torch.unsqueeze(hann_window, 0)
-    filter_time = filter_time * hann_window
+
+    if HAMMING_NOISE:
+        hann_window = torch.hann_window(filter_time.shape[-1], device=device)
+        hann_window = torch.unsqueeze(hann_window, 0)
+        hann_window = torch.unsqueeze(hann_window, 0)
+        filter_time = filter_time * hann_window
 
     # import matplotlib.pyplot as plt
     #

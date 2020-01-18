@@ -1,6 +1,6 @@
 from Parameters import *
 from DataLoader import read_f0, read_lo, read_waveform
-from Synthese import synthetize_additive_plus_bruit
+from Synthese import synthetize_additive_plus_bruit, reverb
 from Net import DDSPNet
 import scipy.io.wavfile
 
@@ -31,7 +31,13 @@ def evaluation(net, file_idx, device, duration):
         additive, noise = synthetize_additive_plus_bruit(a0, f0, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, device)
         additive = additive.numpy().reshape(-1)
         noise = noise.numpy().reshape(-1)
+
+        if REVERB:
+            additive = reverb(additive)
+            noise = reverb(noise)
+
         waveform = additive + noise
+
         return additive, noise, waveform, waveform_truth
     else:
         additive, noise = synthetize_additive_plus_bruit(a0, f0, aa, hs, FRAME_LENGTH, AUDIO_SAMPLE_RATE, device)
