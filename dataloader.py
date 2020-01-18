@@ -4,7 +4,7 @@ import pandas as pd
 
 from scipy.io.wavfile import read
 from torch.utils.data import Dataset as ParentDataset
-from Parameters import *
+from parameters import *
 
 
 class Dataset(ParentDataset):

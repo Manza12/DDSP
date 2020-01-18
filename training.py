@@ -1,13 +1,13 @@
 import time
 
-from Net import DDSPNet
-from DataLoader import Dataset
-from Synthese import synthetize
-from Time import print_time, print_info
-from Loss import compute_stft, spectral_loss
+from net import DDSPNet
+from dataloader import Dataset
+from synthesis import synthetize
+from timing import print_time, print_info
+from loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
-from Parameters import *
+from parameters import *
 
 
 def train(net, dataloader, number_epochs, debug_level):

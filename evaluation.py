@@ -1,9 +1,9 @@
 import scipy.io.wavfile as wav
 
-from Parameters import *
-from DataLoader import read_f0, read_lo, read_waveform
-from Synthese import synthetize, reverb
-from Net import DDSPNet
+from parameters import *
+from dataloader import read_f0, read_lo, read_waveform
+from synthesis import synthetize, reverb
+from net import DDSPNet
 
 
 def evaluation(net, file_idx, device, duration):

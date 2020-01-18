@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import *
+from parameters import *
 
 
 class MLP(nn.Module):

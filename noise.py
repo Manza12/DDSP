@@ -4,7 +4,7 @@ import torch.nn.functional as func
 import scipy.io.wavfile as wav
 import os
 
-from Parameters import *
+from parameters import *
 
 
 def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",

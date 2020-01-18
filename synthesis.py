@@ -2,9 +2,9 @@ import torch
 import torch.nn.functional as func
 import numpy as np
 
-from Noise import filter_noise, create_white_noise
-from DataLoader import int_2_float
-from Parameters import *
+from noise import filter_noise, create_white_noise
+from dataloader import int_2_float
+from parameters import *
 
 
 def synthetize(a0s, f0s, aa, hs, frame_length, sample_rate, device):
