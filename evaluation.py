@@ -70,19 +70,19 @@ if __name__ == "__main__":
         ADDITIVE, NOISE, WAVEFORM_SYNTH, WAVEFORM_TRUTH = \
             evaluation(NET, file_idx=file_index, device=working_device,
                        duration=audio_duration)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT +
-                               "_additive.wav"), AUDIO_SAMPLE_RATE, ADDITIVE)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT +
-                               "_noise.wav"), AUDIO_SAMPLE_RATE, NOISE)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT +
-                               "_syn.wav"), AUDIO_SAMPLE_RATE, WAVEFORM_SYNTH)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT +
-                               "_ref.wav"), AUDIO_SAMPLE_RATE, WAVEFORM_TRUTH)
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_additive.wav"),
+                  AUDIO_SAMPLE_RATE, ADDITIVE)
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_noise.wav"),
+                  AUDIO_SAMPLE_RATE, NOISE)
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_syn.wav"),
+                  AUDIO_SAMPLE_RATE, WAVEFORM_SYNTH)
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_ref.wav"),
+                  AUDIO_SAMPLE_RATE, WAVEFORM_TRUTH)
     else:
         WAVEFORM_SYNTH, WAVEFORM_TRUTH = evaluation(NET, file_idx=file_index,
                                                     device=working_device,
                                                     duration=audio_duration)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT + "_syn.wav"),
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_syn.wav"),
                   AUDIO_SAMPLE_RATE, WAVEFORM_SYNTH)
-        wav.write(os.path.join("Outputs", "Eval_" + INSTRUMENT + "_ref.wav"),
+        wav.write(os.path.join("Outputs", INSTRUMENT + "_ref.wav"),
                   AUDIO_SAMPLE_RATE, WAVEFORM_TRUTH)
