@@ -1,4 +1,4 @@
-import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as func
 
@@ -39,6 +39,8 @@ class DDSPNet(nn.Module):
         self.mlp = MLP(HIDDEN_DIM, HIDDEN_DIM)
         self.dense_additive = nn.Linear(LINEAR_ADDITIVE_DIM,
                                         NUMBER_HARMONICS+1)
+        self.celu_additive = nn.CELU()
+
         if NOISE_AMPLITUDE:
             self.dense_noise = nn.Linear(LINEAR_NOISE_DIM,
                                          NUMBER_NOISE_BANDS+1)
@@ -64,7 +66,18 @@ class DDSPNet(nn.Module):
         y_noise = self.dense_noise(y_noise)
         y_additive = self.dense_additive(y_additive)
 
-        y_additive = torch.sigmoid(y_additive)
-        y_noise = torch.sigmoid(y_noise)
+        if FINAL_SIGMOID == "None":
+            pass
+        elif FINAL_SIGMOID == "Usual":
+            y_additive = torch.sigmoid(y_additive)
+            y_noise = torch.sigmoid(y_noise)
+        elif FINAL_SIGMOID == "Scaled":
+            y_additive = 2 * torch.sigmoid(y_additive)**np.log(10) + 10e-7
+            y_noise = 2 * torch.sigmoid(y_noise)**np.log(10) + 10e-7
+        elif FINAL_SIGMOID == "Mixed":
+            y_additive = 2 * torch.sigmoid(y_additive) ** np.log(10) + 10e-7
+            y_noise = torch.sigmoid(y_noise)
+        else:
+            raise AssertionError("Final sigmoid not understood.")
 
         return y_additive, y_noise

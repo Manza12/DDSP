@@ -3,7 +3,7 @@ import torch
 
 
 ''' FOLDER PARAMETERS '''
-INSTRUMENT = "Violin"
+INSTRUMENT = "Sax"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
@@ -56,6 +56,7 @@ NOISE_ON = True
 SEPARED_NOISE = True
 STFT_NORMALIZED = False
 LOUDNESS_THRESHOLD = 6
+FINAL_SIGMOID = "Mixed"  # Options : "None", "Usual", "Scaled", "Mixed"
 
 
 ''' SYNTHESIS PARAMETERS '''

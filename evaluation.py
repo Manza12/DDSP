@@ -55,7 +55,7 @@ if __name__ == "__main__":
     file_index = 0
     model = "Checkpoint"  # Options : "Full", "Checkpoint"
     working_device = "cpu"  # Use "cpu" when training at the same time
-    audio_duration = 20  # Duration of the evaluation in seconds
+    audio_duration = 60  # Duration of the evaluation in seconds
 
     ''' Charge net '''
     NET = DDSPNet().float()
