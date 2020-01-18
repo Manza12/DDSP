@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as func
 
-from Parameters import LINEAR_OUT_DIM, NUMBER_HARMONICS, HIDDEN_DIM, LINEAR_ADDITIVE_DIM, LINEAR_NOISE_DIM,\
-    NUMBER_NOISE_BANDS, NOISE_AMPLITUDE
+from Parameters import *
 
 
 class MLP(nn.Module):
@@ -38,9 +37,11 @@ class DDSPNet(nn.Module):
         self.mlp_lo = MLP(1, LINEAR_OUT_DIM)
         self.gru = nn.GRU(2*LINEAR_OUT_DIM, HIDDEN_DIM, batch_first=True)
         self.mlp = MLP(HIDDEN_DIM, HIDDEN_DIM)
-        self.dense_additive = nn.Linear(LINEAR_ADDITIVE_DIM, NUMBER_HARMONICS+1)
+        self.dense_additive = nn.Linear(LINEAR_ADDITIVE_DIM,
+                                        NUMBER_HARMONICS+1)
         if NOISE_AMPLITUDE:
-            self.dense_noise = nn.Linear(LINEAR_NOISE_DIM, NUMBER_NOISE_BANDS+1)
+            self.dense_noise = nn.Linear(LINEAR_NOISE_DIM,
+                                         NUMBER_NOISE_BANDS+1)
         else:
             self.dense_noise = nn.Linear(LINEAR_NOISE_DIM, NUMBER_NOISE_BANDS)
 
@@ -57,7 +58,8 @@ class DDSPNet(nn.Module):
         y = self.gru(y)[0]
         y = self.mlp(y)
         y_additive = y[:, :, 0:LINEAR_ADDITIVE_DIM]
-        y_noise = y[:, :, LINEAR_ADDITIVE_DIM:LINEAR_ADDITIVE_DIM+LINEAR_NOISE_DIM]
+        y_noise = \
+            y[:, :, LINEAR_ADDITIVE_DIM:LINEAR_ADDITIVE_DIM + LINEAR_NOISE_DIM]
 
         y_noise = self.dense_noise(y_noise)
         y_additive = self.dense_additive(y_additive)

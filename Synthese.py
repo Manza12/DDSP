@@ -3,10 +3,11 @@ import torch.nn.functional as func
 import numpy as np
 
 from Noise import filter_noise, create_white_noise
-from Parameters import FRAME_LENGTH, HAMMING_WINDOW_LENGTH, HANNING_SMOOTHING
+from DataLoader import int_2_float
+from Parameters import *
 
 
-def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, device):
+def synthetize(a0s, f0s, aa, hs, frame_length, sample_rate, device):
     assert a0s.size() == f0s.size()
     assert a0s.size()[1] == aa.size()[1]
 
@@ -15,7 +16,8 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     signal_length = (nb_bounds - 1) * frame_length
 
     """ Additive part """
-    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear', align_corners=True)
+    f0s = func.interpolate(f0s.unsqueeze(1), size=signal_length, mode='linear',
+                           align_corners=True)
     f0s = f0s.squeeze(1)
 
     # Multiply interpolated f0s by harmonic ranks to get all freqs
@@ -48,8 +50,8 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
     additive = torch.sum(additive, dim=2)
 
     """ Noise part """
-    # hs = torch.sigmoid(hs)  # we impose hs be positive
-    noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH, device=device), hs, device=device)
+    noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH,
+                                            device=device), hs, device=device)
 
     # Empty cache
     torch.cuda.empty_cache()
@@ -58,22 +60,26 @@ def synthetize_additive_plus_bruit(a0s, f0s, aa, hs, frame_length, sample_rate, 
 
 
 def smoothing_amplitudes(aa, signal_length, window_length, device):
-    aa = func.interpolate(aa.transpose(1, 2), size=signal_length, mode='linear', align_corners=True)
+    aa = func.interpolate(aa.transpose(1, 2), size=signal_length,
+                          mode='linear', align_corners=True)
     aa = aa.transpose(1, 2)
 
     if HANNING_SMOOTHING:
         aa_downsampled = aa[:, ::window_length, :]
-        return interpolate_hamming(aa_downsampled, signal_length, window_length, device)
+        return interpolate_hamming(aa_downsampled, signal_length,
+                                   window_length, device)
     else:
         return aa
 
 
 def interpolate_hamming(tensor, signal_length, frame_length, device):
-    y = torch.zeros((tensor.shape[0], tensor.shape[1] * frame_length, tensor.shape[2]), device=device)
+    y = torch.zeros((tensor.shape[0], tensor.shape[1] * frame_length,
+                     tensor.shape[2]), device=device)
     y[:, ::frame_length, :] = tensor
     y = torch.transpose(y, 1, 2)
     y_padded = func.pad(y, [frame_length-1, frame_length-1])
-    w = torch.hamming_window(2*frame_length, device=device).expand(y.shape[1], 1, 2*frame_length)
+    w = torch.hamming_window(2*frame_length, device=device)
+    w = w.expand(y.shape[1], 1, 2*frame_length)
 
     interpolation = torch.conv1d(y_padded, w, groups=y_padded.shape[1])
     interpolation = torch.transpose(interpolation[:, :, 0:signal_length], 1, 2)
@@ -86,11 +92,11 @@ def reverb(waveform):
     import os
     [fs, ir] = scipy.io.wavfile.read(os.path.join("Inputs", "ir_edited.wav"))
 
-    # int to float
-    dtype = ir.dtype
-    if np.issubdtype(dtype, np.integer):
-        ir = ir.astype(np.float32) / np.iinfo(dtype).max
+    assert fs == AUDIO_SAMPLE_RATE
 
-    waveform_reverb = np.convolve(waveform, ir)[ir.shape[0]-1:ir.shape[0]+waveform.shape[0]] / sum(ir)
+    ir = int_2_float(ir)
 
-    return waveform_reverb
+    wf_rev = np.convolve(waveform, ir)
+    wf_rev = wf_rev[ir.shape[0]-1:ir.shape[0]+waveform.shape[0]] / sum(ir)
+
+    return wf_rev
