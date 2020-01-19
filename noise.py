@@ -59,6 +59,8 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
 def create_white_noise(samples, write=False, nom="white_noise", device="cpu"):
     noise_time = torch.tensor(np.float32(np.random.uniform(-1, 1, samples)),
                               device=device)
+    noise_time = noise_time * NOISE_LEVEL
+
     if write:
         wav.write(os.path.join("Outputs", nom + ".wav"), AUDIO_SAMPLE_RATE,
                   noise_time.numpy())
