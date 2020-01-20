@@ -1,5 +1,8 @@
 import torch
 import math
+from scipy.io.wavfile import read as wave_read
+from scipy.io.wavfile import write as wave_write
+import torch.nn.functional as func
 
 
 #Fast frequency domain pytorch convolution for long kernel 
@@ -47,3 +50,32 @@ def convolve(signal, kernel, mode='full'):
 
     start_idx = (padded_size - truncate) // 2
     return result[..., start_idx: start_idx + truncate]
+
+
+def add_reverb(dry_signal, impulse_response):
+
+    ir_length = impulse_response.shape[-1]
+    # signal_length = dry_signal.shape[-1]
+    # max_length = max(ir_length, signal_length)
+
+    dry_signal_paded = func.pad(dry_signal, [ir_length//2, ir_length//2])
+    # impulse_response = func.pad(impulse_response, (0, max_length - ir_length))
+
+    wet_signal = torch.conv1d(dry_signal_paded.unsqueeze(1), impulse_response.unsqueeze(0).unsqueeze(0))
+    wet_signal = wet_signal.squeeze(1)
+
+    return 0.1*(0.3 * wet_signal + 0.7 * dry_signal)
+
+
+if __name__ == "__main__":
+    import numpy as np
+
+    rate, l = wave_read('test.wav')
+    l = l.astype(float)/max(abs(l))
+    l = torch.from_numpy(l)
+    l = l.type(torch.float)
+    l = l.expand(6, l.shape[-1])
+
+    ir_filename = "ir.wav"
+    test_tensor_wet = add_reverb(l, ir_filename)
+    wave_write('test_return.wav', 16000, np.array(test_tensor))

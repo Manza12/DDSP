@@ -3,7 +3,7 @@ import torch
 
 
 ''' FOLDER PARAMETERS '''
-INSTRUMENT = "Synth"
+INSTRUMENT = "Violin"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
@@ -29,7 +29,7 @@ COMPUTE_CACHE = False
 
 
 ''' DEVICE PARAMETERS '''
-GPU_ON = False
+GPU_ON = True
 CUDA_ON = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if CUDA_ON and GPU_ON else "cpu")
 
@@ -65,7 +65,7 @@ SYNTHESIS_SAMPLING_RATE = 16000  # Hertz
 MODULAR_PHASE_SUM = True
 HAMMING_WINDOW_LENGTH = 128
 HAMMING_SMOOTHING = False
-HAMMING_NOISE = False
-REVERB = False
+HAMMING_NOISE = True
+REVERB = True
 NOISE_AMPLITUDE = False
 NOISE_LEVEL = 10e-2

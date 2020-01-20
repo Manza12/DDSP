@@ -38,11 +38,10 @@ def evaluation(net, file_idx, device, duration):
         additive = additive.numpy().reshape(-1)
         noise = noise.numpy().reshape(-1)
 
-        if REVERB:
-            additive = reverb(additive)
-            noise = reverb(noise)
-
         waveform = additive + noise
+
+        if REVERB:
+            waveform = reverb(waveform)
 
         return additive, noise, waveform, waveform_truth
     else:
