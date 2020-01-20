@@ -7,7 +7,7 @@ from timing import print_time, print_info
 from loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
-from reverberation import add_reverb
+from reverb import add_reverb
 from parameters import *
 
 
