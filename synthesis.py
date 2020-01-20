@@ -13,33 +13,28 @@ def synthetize(a0s, f0s, aa, hs, frame_length, sample_rate, device):
     # Initialisation of parameters
     nb_bounds = f0s.size()[1]
     signal_length = (nb_bounds - 1) * frame_length
-    nb_harms = aa.size()[-1] - int(INHARMONIC)
-    harm_ranks = torch.arange(nb_harms, device=device) + 1
+    nb_harms = aa.size()[-1]
 
     """ Additive part """
     if INHARMONIC:
-        #Extraction of inharmonicity factor and frequency computation
-        inharm_fact = aa[:,:,-1]
-        aa = aa[:,:,:-1]
-        ff = f0s.unsqueeze(2) * torch.sqrt(1 + inharm_fact.unsqueeze(2) * (harm_ranks)**2) * harm_ranks
+        # Adding inharmonicity factor for piano dataset
+        harm_ranks = torch.arange(nb_harms, device=device) + 1
+        factor = torch.sqrt(1 + INHARMONICITY_FACTOR * harm_ranks.pow(2))
+        harm_ranks = factor * harm_ranks
     else:
-        ff = f0s.unsqueeze(2) * harm_ranks
-    
-    ff = func.interpolate(torch.transpose(ff, 1, 2), size=signal_length, mode='linear', align_corners=True)
+        harm_ranks = torch.arange(nb_harms, device=device) + 1
+
+    ff = f0s.unsqueeze(2) * harm_ranks
+
+    ff = func.interpolate(torch.transpose(ff, 1, 2), size=signal_length,
+                          mode="linear", align_corners=True)
     ff = torch.transpose(ff, 1, 2)
 
     # Phase accumulation over time for each freq
     phases = 2 * np.pi * ff / sample_rate
     if MODULAR_PHASE_SUM:
-        # Computing phase accumulation modulo 2*pi to minimize error
-        phases_acc = phases
-        cursor = 0
-        stride = 256
-        while cursor < signal_length:
-            phases_acc[:,cursor,:] %= (2 * np.pi)
-            phases_acc[:,cursor:cursor+stride,:] = torch.cumsum(phases[:,cursor:cursor+stride,:], dim=1)
-            cursor += stride - 1
-    else : 
+        phases_acc = modular_sum(phases, signal_length)
+    else:
         phases_acc = torch.cumsum(phases, dim=1)
 
     # Normalize amplitudes with a0
@@ -82,6 +77,20 @@ def smoothing_amplitudes(aa, signal_length, window_length, device):
                                    window_length, device)
     else:
         return aa
+
+
+def modular_sum(phases, signal_length):
+    # Computing phase accumulation modulo 2*pi to minimize error
+    phases_acc = phases
+    cursor = 0
+    stride = 256
+    while cursor < signal_length:
+        phases_acc[:, cursor, :] %= (2 * np.pi)
+        phases_acc[:, cursor:cursor + stride, :] = torch.cumsum(
+            phases[:, cursor:cursor + stride, :], dim=1)
+        cursor += stride - 1
+
+    return phases_acc
 
 
 def interpolate_hamming(tensor, signal_length, frame_length, device):
