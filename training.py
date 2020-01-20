@@ -18,10 +18,12 @@ def train(net, dataloader, number_epochs, debug_level):
 
     time_start = time.time()
 
-    rate, impulse_response = wave_read('ir.wav')
-    impulse_response = impulse_response.astype(float)/max(abs(impulse_response))
-    impulse_response = torch.from_numpy(impulse_response)
-    impulse_response = impulse_response.type(torch.float).to(DEVICE)
+    if REVERB:
+        rate, impulse_response = wave_read('ir.wav')
+        impulse_response = \
+            impulse_response.astype(float)/max(abs(impulse_response))
+        impulse_response = torch.from_numpy(impulse_response)
+        impulse_response = impulse_response.type(torch.float).to(DEVICE)
 
     for epoch in range(number_epochs):
         print_info("#### Epoch " + str(epoch+1) + "/" + str(number_epochs)
