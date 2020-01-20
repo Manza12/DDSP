@@ -37,15 +37,13 @@ class DDSPNet(nn.Module):
         self.mlp_lo = MLP(1, LINEAR_OUT_DIM)
         self.gru = nn.GRU(2*LINEAR_OUT_DIM, HIDDEN_DIM, batch_first=True)
         self.mlp = MLP(HIDDEN_DIM, HIDDEN_DIM)
-        self.dense_additive = nn.Linear(LINEAR_ADDITIVE_DIM,
-                                        NUMBER_HARMONICS+1)
+        self.dense_additive = nn.Linear(HIDDEN_DIM, NUMBER_HARMONICS+1)
         self.celu_additive = nn.CELU()
 
         if NOISE_AMPLITUDE:
-            self.dense_noise = nn.Linear(LINEAR_NOISE_DIM,
-                                         NUMBER_NOISE_BANDS+1)
+            self.dense_noise = nn.Linear(HIDDEN_DIM, NUMBER_NOISE_BANDS+1)
         else:
-            self.dense_noise = nn.Linear(LINEAR_NOISE_DIM, NUMBER_NOISE_BANDS)
+            self.dense_noise = nn.Linear(HIDDEN_DIM, NUMBER_NOISE_BANDS)
 
     def forward(self, x):
         x_f0 = x["f0"]
@@ -59,12 +57,9 @@ class DDSPNet(nn.Module):
         y = torch.cat((y_f0, y_lo), dim=2)
         y = self.gru(y)[0]
         y = self.mlp(y)
-        y_additive = y[:, :, 0:LINEAR_ADDITIVE_DIM]
-        y_noise = \
-            y[:, :, LINEAR_ADDITIVE_DIM:LINEAR_ADDITIVE_DIM + LINEAR_NOISE_DIM]
 
-        y_noise = self.dense_noise(y_noise)
-        y_additive = self.dense_additive(y_additive)
+        y_noise = self.dense_noise(y)
+        y_additive = self.dense_additive(y)
 
         if FINAL_SIGMOID == "None":
             pass

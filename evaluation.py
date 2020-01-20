@@ -1,7 +1,7 @@
 import scipy.io.wavfile as wav
 
 from parameters import *
-from dataloader import read_f0, read_lo, read_waveform
+from dataloader import read_f0, read_lo, read_waveform, get_mean_lo
 from synthesis import synthetize, reverb
 from net import DDSPNet
 
@@ -15,6 +15,8 @@ def evaluation(net, file_idx, device, duration):
         .unsqueeze(0).unsqueeze(-1)
 
     lo = read_lo(audio_filename)
+    audio_filenames = sorted(os.listdir(AUDIO_PATH))
+    lo -= get_mean_lo(audio_filenames)
     lo = lo[:-1]
     lo = lo[0:duration * FRAME_SAMPLE_RATE].unsqueeze(0).unsqueeze(-1)
 
