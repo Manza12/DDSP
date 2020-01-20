@@ -7,6 +7,7 @@ from timing import print_time, print_info
 from loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
+from reverb import add_reverb
 from parameters import *
 
 
@@ -61,6 +62,9 @@ def train(net, dataloader, number_epochs, debug_level):
                 additive, bruit = synthetize(a0s, f0s, aa, hs, FRAME_LENGTH,
                                              AUDIO_SAMPLE_RATE, DEVICE)
                 sons = additive
+
+            if REVERB:
+                sons = add_reverb(sons)
 
             time_post_synth = print_time("Time to synthetize :", debug_level,
                                          "INFO", time_pre_synth, 3)
