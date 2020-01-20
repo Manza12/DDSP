@@ -3,7 +3,7 @@ import torch
 
 
 ''' FOLDER PARAMETERS '''
-INSTRUMENT = "Violin"
+INSTRUMENT = "Synth"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
@@ -66,6 +66,8 @@ MODULAR_PHASE_SUM = True
 HAMMING_WINDOW_LENGTH = 128
 HAMMING_SMOOTHING = False
 HAMMING_NOISE = True
-REVERB = True
+REVERB = False
 NOISE_AMPLITUDE = False
 NOISE_LEVEL = 10e-2
+INHARMONIC = True
+INHARMONICITY_FACTOR = 10e-5
