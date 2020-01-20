@@ -115,11 +115,12 @@ def smooth_scale_loudness(loudness, filter_loudness=SMOOTH_LOUDNESS):
     lo = loudness - mean_lo
 
     if filter_loudness:
-        n = 20
-        cutoff_fq = 0.30 * 2
+        n = 5
+        cutoff_fq = 0.3 * 2
         [b, a] = sg.butter(n, cutoff_fq)
         lo_fliped = sg.filtfilt(b, a, lo)
-        lo = torch.from_numpy(np.flip(lo_fliped, axis=0).copy()).float()
+        lo = np.flip(np.flip(lo_fliped, axis=0).copy()).copy()
+        lo = torch.from_numpy(lo).float()
 
     return lo
 

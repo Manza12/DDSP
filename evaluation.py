@@ -55,7 +55,7 @@ def evaluation(net, file_idx, device, duration):
 if __name__ == "__main__":
     ''' Parameters '''
     file_index = 0
-    model = "Full"  # Options : "Full", "Checkpoint", "Sax", "Violin"
+    model = "Checkpoint"  # Options : "Full", "Checkpoint", "Sax", "Violin"
     working_device = "cpu"  # Use "cpu" when training at the same time
     audio_duration = 60  # Duration of the evaluation in seconds
 
