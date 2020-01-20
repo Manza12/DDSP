@@ -3,7 +3,7 @@ import torch
 
 
 ''' FOLDER PARAMETERS '''
-INSTRUMENT = "Sax"
+INSTRUMENT = "Synth"
 AUDIO_PATH = os.path.join("Inputs", INSTRUMENT, "Audio")
 F0_PATH = os.path.join("Inputs", INSTRUMENT, "F0")
 FRAGMENT_CACHE_PATH = os.path.join("Cache", INSTRUMENT)
@@ -29,7 +29,7 @@ COMPUTE_CACHE = False
 
 
 ''' DEVICE PARAMETERS '''
-GPU_ON = True
+GPU_ON = False
 CUDA_ON = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if CUDA_ON and GPU_ON else "cpu")
 
@@ -51,6 +51,9 @@ LINEAR_NOISE_DIM = 256
 assert LINEAR_ADDITIVE_DIM + LINEAR_NOISE_DIM <= LINEAR_OUT_DIM
 HIDDEN_DIM = 512
 NUMBER_HARMONICS = 64
+INHARMONIC = False
+if INHARMONIC:
+    NUMBER_HARMONICS += 1
 NUMBER_NOISE_BANDS = 65
 NOISE_ON = True
 SEPARED_NOISE = True
@@ -62,6 +65,7 @@ FINAL_SIGMOID = "Mixed"  # Options : "None", "Usual", "Scaled", "Mixed"
 ''' SYNTHESIS PARAMETERS '''
 SYNTHESIS_DURATION = 2  # Seconds
 SYNTHESIS_SAMPLING_RATE = 16000  # Hertz
+MODULAR_PHASE_SUM = True
 HAMMING_WINDOW_LENGTH = 128
 HANNING_SMOOTHING = False
 HAMMING_NOISE = True
