@@ -76,7 +76,7 @@ def smoothing_amplitudes(aa, signal_length, window_length, device):
                           mode='linear', align_corners=True)
     aa = aa.transpose(1, 2)
 
-    if HANNING_SMOOTHING:
+    if HAMMING_SMOOTHING:
         aa_downsampled = aa[:, ::window_length, :]
         return interpolate_hamming(aa_downsampled, signal_length,
                                    window_length, device)
