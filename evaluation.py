@@ -1,7 +1,7 @@
 import scipy.io.wavfile as wav
 
 from parameters import *
-from dataloader import read_f0, read_lo, read_waveform, get_mean_lo
+from dataloader import read_f0, read_lo, read_waveform, smooth_scale_loudness
 from synthesis import synthetize, reverb
 from net import DDSPNet
 
@@ -15,8 +15,9 @@ def evaluation(net, file_idx, device, duration):
         .unsqueeze(0).unsqueeze(-1)
 
     lo = read_lo(audio_filename)
-    audio_filenames = sorted(os.listdir(AUDIO_PATH))
-    lo -= get_mean_lo(audio_filenames)
+
+    lo = smooth_scale_loudness(lo)
+
     lo = lo[:-1]
     lo = lo[0:duration * FRAME_SAMPLE_RATE].unsqueeze(0).unsqueeze(-1)
 
@@ -55,7 +56,7 @@ def evaluation(net, file_idx, device, duration):
 if __name__ == "__main__":
     ''' Parameters '''
     file_index = 0
-    model = "Checkpoint"  # Options : "Full", "Checkpoint", "Sax", "Violin"
+    model = "Full"  # Options : "Full", "Checkpoint", "Sax", "Violin"
     working_device = "cpu"  # Use "cpu" when training at the same time
     audio_duration = 60  # Duration of the evaluation in seconds
 
@@ -64,12 +65,14 @@ if __name__ == "__main__":
     if model == "Full":
         NET.load_state_dict(torch.load(PATH_TO_MODEL, map_location=DEVICE))
     elif model == "Checkpoint":
-        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT, map_location=DEVICE))
+        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT,
+                                       map_location=DEVICE))
     elif model == "Sax":
         path_to_model = os.path.join(PATH_SAVED_MODELS, "Model_Sax" + ".pth")
         NET.load_state_dict(torch.load(path_to_model, map_location=DEVICE))
     elif model == "Violin":
-        path_to_model = os.path.join(PATH_SAVED_MODELS, "Model_Violin" + ".pth")
+        path_to_model = os.path.join(PATH_SAVED_MODELS,
+                                     "Model_Violin" + ".pth")
         NET.load_state_dict(torch.load(path_to_model, map_location=DEVICE))
     else:
         AssertionError("Model not recognized")

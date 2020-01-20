@@ -1,6 +1,7 @@
 import scipy
 import numpy as np
 import pandas as pd
+import scipy.signal as sg
 
 from scipy.io.wavfile import read
 from torch.utils.data import Dataset as ParentDataset
@@ -34,14 +35,13 @@ def compute_cache():
 
     f0_filenames = sorted(os.listdir(F0_PATH))
     audio_filenames = sorted(os.listdir(AUDIO_PATH))
-    mean_lo = get_mean_lo(audio_filenames)
 
     item_i = 0
     for audio_filename, f0_filename in zip(audio_filenames, f0_filenames):
         f0_full = read_f0(f0_filename)
         lo_full = read_lo(audio_filename)
 
-        lo_full -= mean_lo
+        lo_full = smooth_scale_loudness(lo_full)
 
         waveform_full = read_waveform(audio_filename)
 
@@ -105,6 +105,21 @@ def read_lo(file_name):
     stft = torch.sum(stft ** 2, dim=-1)
     lo = torch.sum(stft, dim=0)
     lo = torch.log(lo + np.finfo(np.float32).eps)
+
+    return lo
+
+
+def smooth_scale_loudness(loudness, filter_loudness=SMOOTH_LOUDNESS):
+    audio_filenames = sorted(os.listdir(AUDIO_PATH))
+    mean_lo = get_mean_lo(audio_filenames)
+    lo = loudness - mean_lo
+
+    if filter_loudness:
+        n = 20
+        cutoff_fq = 0.30 * 2
+        [b, a] = sg.butter(n, cutoff_fq)
+        lo_fliped = sg.filtfilt(b, a, lo)
+        lo = torch.from_numpy(np.flip(lo_fliped, axis=0).copy()).float()
 
     return lo
 
