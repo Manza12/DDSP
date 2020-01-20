@@ -55,7 +55,7 @@ def evaluation(net, file_idx, device, duration):
 if __name__ == "__main__":
     ''' Parameters '''
     file_index = 0
-    model = "Checkpoint"  # Options : "Full", "Checkpoint"
+    model = "Checkpoint"  # Options : "Full", "Checkpoint", "Sax", "Violin"
     working_device = "cpu"  # Use "cpu" when training at the same time
     audio_duration = 60  # Duration of the evaluation in seconds
 
@@ -63,9 +63,16 @@ if __name__ == "__main__":
     NET = DDSPNet().float()
     if model == "Full":
         NET.load_state_dict(torch.load(PATH_TO_MODEL, map_location=DEVICE))
+    elif model == "Checkpoint":
+        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT, map_location=DEVICE))
+    elif model == "Sax":
+        path_to_model = os.path.join(PATH_SAVED_MODELS, "Model_Sax" + ".pth")
+        NET.load_state_dict(torch.load(path_to_model, map_location=DEVICE))
+    elif model == "Violin":
+        path_to_model = os.path.join(PATH_SAVED_MODELS, "Model_Violin" + ".pth")
+        NET.load_state_dict(torch.load(path_to_model, map_location=DEVICE))
     else:
-        NET.load_state_dict(torch.load(PATH_TO_CHECKPOINT,
-                                       map_location=DEVICE))
+        AssertionError("Model not recognized")
 
     ''' Create and write waveforms '''
     if SEPARED_NOISE:

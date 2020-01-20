@@ -5,16 +5,16 @@ import scipy.io.wavfile as wav
 from parameters import *
 
 
-def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
+def filter_noise(noise_time, hh, write=False, nom="filtered_noise",
                  device=DEVICE):
     # Décomposition
     if NOISE_AMPLITUDE:
-        filter_lo = filter_freq[:, :, 0]
-        filter_freq = filter_freq[:, :, 1:]
-        hh_sum = torch.sum(filter_freq, dim=2)
+        filter_lo = hh[:, :, 0]
+        hh = hh[:, :, 1:]
+        hh_sum = torch.sum(hh, dim=2)
         hh_sum[hh_sum == 0.] = 1.
-        hh_norm = filter_freq / hh_sum.unsqueeze(-1)
-        filter_freq = hh_norm * filter_lo.unsqueeze(-1)
+        hh_norm = hh / hh_sum.unsqueeze(-1)
+        hh = hh_norm * filter_lo.unsqueeze(-1)
 
     # Noise part
     new_shape = (noise_time.shape[0] // FRAME_LENGTH, FRAME_LENGTH)
@@ -23,21 +23,26 @@ def filter_noise(noise_time, filter_freq, write=False, nom="filtered_noise",
     noise_freq = torch.rfft(noise_time_splited, 1)
 
     # Filter part
-    filter_imaginary = torch.zeros(filter_freq.shape, device=device)
-    filter_freq_complex = torch.stack((filter_freq, filter_imaginary), dim=-1)
-    filter_time = torch.irfft(filter_freq_complex, 1, onesided=True)
-    hann_window = torch.hann_window(filter_time.shape[-1], device=device)
-    hann_window = torch.unsqueeze(hann_window, 0)
-    hann_window = torch.unsqueeze(hann_window, 0)
-    filter_time = filter_time * hann_window
-    filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1,
-                             dims=-1)
+    hh_imaginary = torch.zeros(hh.shape, device=device)
+    hh_complex = torch.stack((hh, hh_imaginary), dim=-1)
+
+    # Hamming smoothing
+    filter_time = torch.irfft(hh_complex, 1, onesided=True)
+    if HAMMING_NOISE:
+        hann_window = torch.hann_window(filter_time.shape[-1], device=device)
+        hann_norm = sum(hann_window)
+        hann_window = hann_window / hann_norm
+        hann_window = hann_window.unsqueeze(0).unsqueeze(0)
+        filter_time = filter_time * hann_window
+        filter_time = torch.roll(filter_time, filter_time.shape[0] // 2 + 1,
+                                 dims=-1)
+
     pad = (noise_time_splited.shape[-1] - filter_time.shape[-1]) // 2
     filter_time = func.pad(filter_time, [pad, pad + 1])
-    filter_freq = torch.rfft(filter_time, 1)
+    hh_complex = torch.rfft(filter_time, 1)
 
     # Filtered noise
-    filtered_noise_freq = complex_mult_torch(noise_freq, filter_freq)
+    filtered_noise_freq = complex_mult_torch(noise_freq, hh_complex)
     filtered_noise_time = torch.irfft(filtered_noise_freq, 1)
     filtered_noise_time = filtered_noise_time[:, :, 0:FRAME_LENGTH]
 
