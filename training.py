@@ -8,6 +8,7 @@ from loss import compute_stft, spectral_loss
 from torch.utils.data import DataLoader
 from torch import optim
 from reverb import add_reverb
+from scipy.io.wavfile import read as wave_read
 from parameters import *
 
 
@@ -16,6 +17,11 @@ def train(net, dataloader, number_epochs, debug_level):
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, SCHEDULER_RATE)
 
     time_start = time.time()
+
+    rate, impulse_response = wave_read('ir.wav')
+    impulse_response = impulse_response.astype(float)/max(abs(impulse_response))
+    impulse_response = torch.from_numpy(impulse_response)
+    impulse_response = impulse_response.type(torch.float).to(DEVICE)
 
     for epoch in range(number_epochs):
         print_info("#### Epoch " + str(epoch+1) + "/" + str(number_epochs)
@@ -64,7 +70,7 @@ def train(net, dataloader, number_epochs, debug_level):
                 sons = additive
 
             if REVERB:
-                sons = add_reverb(sons)
+                sons = add_reverb(sons, impulse_response)
 
             time_post_synth = print_time("Time to synthetize :", debug_level,
                                          "INFO", time_pre_synth, 3)

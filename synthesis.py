@@ -111,7 +111,7 @@ def interpolate_hamming(tensor, signal_length, frame_length, device):
 def reverb(waveform):
     import scipy
     import os
-    [fs, ir] = scipy.io.wavfile.read(os.path.join("Inputs", "ir_edited.wav"))
+    [fs, ir] = scipy.io.wavfile.read('ir.wav')
 
     assert fs == AUDIO_SAMPLE_RATE
 
