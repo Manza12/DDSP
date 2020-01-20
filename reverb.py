@@ -8,5 +8,5 @@ def add_reverb(dry_signal, impulse_response):
     wet_signal = torch.conv1d(dry_signal_paded.unsqueeze(1),
                               impulse_response.unsqueeze(0).unsqueeze(0))
     wet_signal = wet_signal.squeeze(1)
-    
+
     return 0.3 * wet_signal + 0.7 * dry_signal

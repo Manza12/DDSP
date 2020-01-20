@@ -1,5 +1,6 @@
 import torch.nn.functional as func
 import numpy as np
+import scipy.io.wavfile as wav
 
 from noise import filter_noise, create_white_noise
 from dataloader import int_2_float
@@ -73,8 +74,10 @@ def smoothing_amplitudes(aa, signal_length, window_length, device):
 
     if HAMMING_SMOOTHING:
         aa_downsampled = aa[:, ::window_length, :]
-        return interpolate_hamming(aa_downsampled, signal_length,
-                                   window_length, device)
+        aa_interpolated = interpolate_hamming(aa_downsampled, signal_length,
+                                              window_length, device)
+
+        return aa_interpolated
     else:
         return aa
 
@@ -97,10 +100,12 @@ def interpolate_hamming(tensor, signal_length, frame_length, device):
     y = torch.zeros((tensor.shape[0], tensor.shape[1] * frame_length,
                      tensor.shape[2]), device=device)
     y[:, ::frame_length, :] = tensor
+
     y = torch.transpose(y, 1, 2)
-    y_padded = func.pad(y, [frame_length-1, frame_length-1])
-    w = torch.hamming_window(2*frame_length, device=device)
-    w = w.expand(y.shape[1], 1, 2*frame_length)
+    y_padded = func.pad(y, [frame_length+1, frame_length])
+    hamming_length = 2*frame_length+1
+    w = torch.hamming_window(hamming_length, device=device, periodic=False)
+    w = w.expand(y.shape[1], 1, hamming_length)
 
     interpolation = torch.conv1d(y_padded, w, groups=y_padded.shape[1])
     interpolation = torch.transpose(interpolation[:, :, 0:signal_length], 1, 2)
@@ -109,9 +114,7 @@ def interpolate_hamming(tensor, signal_length, frame_length, device):
 
 
 def reverb(waveform):
-    import scipy
-    import os
-    [fs, ir] = scipy.io.wavfile.read('ir.wav')
+    [fs, ir] = wav.read('ir.wav')
 
     assert fs == AUDIO_SAMPLE_RATE
 
