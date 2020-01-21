@@ -2,12 +2,12 @@ import torch.nn.functional as func
 import numpy as np
 import scipy.io.wavfile as wav
 
-from noise import filter_noise, create_white_noise
+from noise import synthetize_noise
 from dataloader import int_2_float
 from parameters import *
 
 
-def synthetize(a0s, f0s, aa, hs, frame_length, sample_rate, device):
+def synthetize(a0s, f0s, aa, hh, frame_length, sample_rate, device):
     assert a0s.size() == f0s.size()
     assert a0s.size()[1] == aa.size()[1]
 
@@ -58,8 +58,7 @@ def synthetize(a0s, f0s, aa, hs, frame_length, sample_rate, device):
     additive = torch.sum(additive, dim=2)
 
     """ Noise part """
-    noise = filter_noise(create_white_noise(hs.shape[1] * FRAME_LENGTH,
-                                            device=device), hs, device=device)
+    noise = synthetize_noise(hh, device)
 
     # Empty cache
     torch.cuda.empty_cache()

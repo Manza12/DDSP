@@ -60,14 +60,14 @@ def train(net, dataloader, number_epochs, debug_level):
             a0s = y_additive[:, :, 0]
             aa = y_additive[:, :, 1:NUMBER_HARMONICS + 1]
 
-            hs = y_noise[:, :, 0:NUMBER_NOISE_BANDS + 1]
+            hh = y_noise[:, :, 0:NUMBER_NOISE_BANDS + 1]
 
             if NOISE_ON:
-                additive, bruit = synthetize(a0s, f0s, aa, hs, FRAME_LENGTH,
+                additive, bruit = synthetize(a0s, f0s, aa, hh, FRAME_LENGTH,
                                              AUDIO_SAMPLE_RATE, DEVICE)
                 sons = additive + bruit
             else:
-                additive, bruit = synthetize(a0s, f0s, aa, hs, FRAME_LENGTH,
+                additive, bruit = synthetize(a0s, f0s, aa, hh, FRAME_LENGTH,
                                              AUDIO_SAMPLE_RATE, DEVICE)
                 sons = additive
 

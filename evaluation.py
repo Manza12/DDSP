@@ -31,10 +31,10 @@ def evaluation(net, file_idx, device, duration):
     f0 = x["f0"].squeeze(-1)
     a0 = y_additive[:, :, 0]
     aa = y_additive[:, :, 1:NUMBER_HARMONICS + 1]
-    hs = y_bruit[:, :, 0:NUMBER_NOISE_BANDS + 1]
+    hh = y_bruit[:, :, 0:NUMBER_NOISE_BANDS + 1]
 
     if NOISE_ON:
-        additive, noise = synthetize(a0, f0, aa, hs, FRAME_LENGTH,
+        additive, noise = synthetize(a0, f0, aa, hh, FRAME_LENGTH,
                                      AUDIO_SAMPLE_RATE, device)
         additive = additive.numpy().reshape(-1)
         noise = noise.numpy().reshape(-1)
@@ -46,7 +46,7 @@ def evaluation(net, file_idx, device, duration):
 
         return additive, noise, waveform, waveform_truth
     else:
-        additive, noise = synthetize(a0, f0, aa, hs, FRAME_LENGTH,
+        additive, noise = synthetize(a0, f0, aa, hh, FRAME_LENGTH,
                                      AUDIO_SAMPLE_RATE, device)
         waveform = additive
         return waveform, waveform_truth
