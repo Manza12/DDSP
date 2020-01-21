@@ -5,6 +5,55 @@ import scipy.io.wavfile as wav
 from parameters import *
 
 
+def synthetize_noise(hh, device):
+    # Drop last frame
+    hh = hh[:, :-1, :]
+
+    if NOISE_AMPLITUDE:
+        h0 = hh[:, :, 0].unsqueeze(-1)
+        hh = hh[:, :, 1:]
+    else:
+        h0 = torch.ones(hh.shape[0], hh.shape[1], 1, device=device)
+
+    assert len(h0.size()) == 3
+    assert len(hh.size()) == 3
+    assert h0.size()[0] == hh.size()[0]  # batch dim
+    assert h0.size()[1] == hh.size()[1]  # frame dim
+
+    nb_batchs, nb_frames, _ = hh.size()
+
+    # Transform filter coeffs back to time
+    z = torch.zeros(hh.shape, device=device)
+    hh = torch.stack((hh, z), dim=-1)
+    ir = torch.irfft(hh, 1, onesided=True)
+
+    # To linear phase
+    ir = torch.roll(ir, ir.size()[-1] // 2, -1)
+
+    # Apply hann window
+    if HAMMING_NOISE:
+        win = torch.hann_window(ir.shape[-1], device=device)
+        win = win.reshape(1, 1, -1)
+        ir = ir * win
+
+    # Pad filter in time so it has the same length as a frame
+    padding = (FRAME_LENGTH - ir.size()[-1]) + FRAME_LENGTH - 1
+    padding_left = padding // 2
+    padding_right = padding - padding_left
+    ir = func.pad(ir, [padding_left, padding_right])
+
+    # Init noise in [-1, +1] * NOISE_LEVEL
+    noise = torch.rand(nb_frames, FRAME_LENGTH, device=device) * 2 - 1
+    noise *= NOISE_LEVEL
+
+    noise = torch.conv1d(ir, noise.unsqueeze(1), groups=nb_frames)
+    noise = noise * h0
+
+    noise = noise.reshape(nb_batchs, -1)
+
+    return noise
+
+
 def filter_noise(noise_time, hh, write=False, nom="filtered_noise",
                  device=DEVICE):
     # Décomposition
