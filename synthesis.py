@@ -25,16 +25,14 @@ def synthetize(a0s, f0s, aa, hh, frame_length, sample_rate, device):
     else:
         harm_ranks = torch.arange(nb_harms, device=device) + 1
 
-
     # Multiply f0s by harmonic ranks to get all freqs
     ff = f0s.unsqueeze(-1) * harm_ranks.unsqueeze(0).unsqueeze(0)
-    # Prevent aliasing
-    max_f = sample_rate / 2.0
+    max_f = sample_rate / 2.1
     aa[ff >= max_f] = 0.0
 
     f0s = f0s.unsqueeze(1)
-    f0s = func.interpolate(f0s, size=signal_length,
-                          mode="linear", align_corners=True)
+    f0s = func.interpolate(f0s, size=signal_length, mode="linear",
+                           align_corners=True)
     f0s = f0s.squeeze(1)
 
     # Phase accumulation over time
@@ -87,6 +85,14 @@ def smoothing_amplitudes(aa, signal_length, window_length, device):
         return aa
 
 
+def prevent_aliasing(ff, aa, f_max, f_min):
+    temp = (f_max - ff[ff >= f_min]) / (f_max - f_min)
+    aa[ff >= f_min] *= temp**4
+    aa[ff >= f_max] = 0
+
+    return aa
+
+
 def modular_sum(phases, signal_length):
     # Computing phase accumulation modulo 2*pi to minimize error
     cursor = 0
@@ -101,6 +107,7 @@ def modular_sum(phases, signal_length):
     phases %= 2.0 * np.pi
 
     return phases
+
 
 def interpolate_hamming(tensor, signal_length, frame_length, device):
     y = torch.zeros((tensor.shape[0], tensor.shape[1] * frame_length,

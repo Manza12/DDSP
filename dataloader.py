@@ -115,7 +115,7 @@ def smooth_scale_loudness(loudness, filter_loudness=SMOOTH_LOUDNESS):
     lo = loudness - mean_lo
 
     if filter_loudness:
-        n = 5
+        n = 20
         cutoff_fq = 0.3 * 2
         [b, a] = sg.butter(n, cutoff_fq)
         lo_fliped = sg.filtfilt(b, a, lo)
